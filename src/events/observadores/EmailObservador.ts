@@ -17,7 +17,6 @@ export interface EmailSimulado {
   enviadoEm: Date;
 }
 
-// Envio de e-mail SIMULADO: nada sai do processo; as mensagens ficam em `enviados` e no log.
 export class EmailObservador implements Observador {
   readonly nome = 'email';
   private readonly _enviados: EmailSimulado[] = [];

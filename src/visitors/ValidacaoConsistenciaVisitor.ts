@@ -12,7 +12,6 @@ export interface ResultadoValidacao {
   papeisRequeridos: number;
 }
 
-// Verifica papéis obrigatórios preenchidos, orçamento suficiente e coerência de cada membro.
 export class ValidacaoConsistenciaVisitor extends VisitanteBase<ResultadoValidacao> {
   private readonly erros: string[] = [];
   private readonly membrosPorProfissional = new Map<string, MembroRecomendadoLeitura>();
@@ -66,7 +65,6 @@ export class ValidacaoConsistenciaVisitor extends VisitanteBase<ResultadoValidac
     };
   }
 
-  // Regras extras de cada tipo de projeto (validadores das fábricas); a ficção não tem nenhuma.
   protected errosDoTipo(_projeto: Projeto): string[] {
     return [];
   }

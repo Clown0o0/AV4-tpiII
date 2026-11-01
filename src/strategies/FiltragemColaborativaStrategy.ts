@@ -11,14 +11,12 @@ import {
   type RecomendacaoStrategy,
 } from './RecomendacaoStrategy';
 
-export const PESO_PRIOR_BAYESIANO = 2; // quantas "notas virtuais" com a média geral cada profissional recebe
+export const PESO_PRIOR_BAYESIANO = 2;
 export const NOTA_NEUTRA = 3;
 
 type NotasDoProdutorPorProfissional = Map<string, number>;
 type NotasPorProdutor = Map<string, NotasDoProdutorPorProfissional>;
 
-// Estima a nota que o produtor do projeto daria a cada candidato, com base nas notas de
-// produtores de gosto parecido. Sem vizinhos, cai numa média suavizada do próprio candidato.
 export class FiltragemColaborativaStrategy implements RecomendacaoStrategy {
   readonly tipo = 'FILTRAGEM_COLABORATIVA' as const;
   readonly descricao = 'Filtragem colaborativa usando o histórico de avaliações de produtores';
@@ -59,7 +57,6 @@ interface SomaPonderada {
   pesoTotal: number;
 }
 
-// Por profissional: soma das notas dos vizinhos que o avaliaram, ponderadas pela similaridade.
 type SomasDosVizinhos = Map<string, SomaPonderada>;
 
 interface ResumoUniverso {
@@ -68,7 +65,6 @@ interface ResumoUniverso {
   somasPorProdutor: Map<string, SomasDosVizinhos>;
 }
 
-// Cache por array: numa rodada todos os papéis recebem o mesmo `universo`.
 const CACHE_RESUMOS_POR_UNIVERSO = new WeakMap<readonly Profissional[], ResumoUniverso>();
 
 function resumoDoUniverso(universo: readonly Profissional[]): ResumoUniverso {
@@ -83,8 +79,6 @@ function somasDosVizinhosDoProdutor(resumo: ResumoUniverso, produtor: string): S
   return obterOuCalcular(resumo.somasPorProdutor, produtor, () => somarNotasDosVizinhos(calcularVizinhos(resumo.notas, produtor)));
 }
 
-// Calculado uma vez por produtor em vez de percorrer os vizinhos para cada candidato. Os vizinhos
-// são somados na mesma ordem, então o resultado é idêntico ao da soma feita candidato a candidato.
 function somarNotasDosVizinhos(vizinhos: readonly Vizinho[]): SomasDosVizinhos {
   const somas: SomasDosVizinhos = new Map();
   for (const [notasDoVizinho, similaridade] of vizinhos) {
@@ -112,7 +106,6 @@ function calcularVizinhos(notas: NotasPorProdutor, produtor: string): Vizinho[] 
   return vizinhos;
 }
 
-// Cache porque as avaliações de um profissional não mudam depois de carregadas.
 const CACHE_MEDIAS_POR_PROFISSIONAL = new WeakMap<Profissional, Array<[autorId: string, media: number]>>();
 
 function mediasPorAutor(profissional: Profissional): Array<[string, number]> {
@@ -155,8 +148,6 @@ function calcularMediaGeral(profissionais: readonly Profissional[]): number {
   return quantidade === 0 ? NOTA_NEUTRA : soma / quantidade;
 }
 
-// Notas centralizadas no meio da escala para que gostos opostos deem similaridade negativa;
-// só entram os profissionais avaliados pelos dois produtores.
 function similaridadeEntreProdutores(a: NotasDoProdutorPorProfissional | undefined, b: NotasDoProdutorPorProfissional): number {
   if (!a) return 0;
   const [centralizadasA, centralizadasB] = notasCentralizadasEmComum(a, b);

@@ -1,76 +1,68 @@
+import type { AdaptadorArmazenamento } from '../adaptadores/armazenamento/AdaptadorArmazenamento';
+import type { AdaptadorPagamento } from '../adaptadores/pagamento/AdaptadorPagamento';
+import type { AdaptadorProfissional, AvaliacaoProfissional } from '../adaptadores/profissional/AdaptadorProfissional';
 import type { Convite } from '../domain/entities/Convite';
-import type {
-  AjustesProjeto,
-  AlteracoesProjeto,
-  DadosProjeto,
-  PapelTecnico,
-  Projeto,
-  ResultadoAlteracao,
-  TipoCaptacao,
-  TipoEstrategia,
+import {
+  ESTRATEGIA_PADRAO,
+  type AjustesProjeto,
+  type AlteracoesProjeto,
+  type DadosProjeto,
+  type PapelTecnico,
+  type Projeto,
+  type TipoCaptacao,
+  type TipoEstrategia,
 } from '../domain/entities/Projeto';
 import type { Profissional } from '../domain/entities/Profissional';
-import type { MembroRecomendadoLeitura, Recomendacao } from '../domain/entities/Recomendacao';
+import type { Equipe, MembroRecomendadoLeitura, Recomendacao } from '../domain/entities/Recomendacao';
 import { ErroEstadoInvalido, ErroNaoEncontrado, ErroValidacao } from '../domain/errors';
-import type { CicloDeVidaDoCatalogo, FonteDeProfissionais, OrigemDosProfissionais } from '../domain/ports/FonteDeProfissionais';
-import type { ProjetoRepository } from '../domain/ports/ProjetoRepository';
-import type { RecomendacaoRepository } from '../domain/ports/RecomendacaoRepository';
-import type { CatalogoFabricas } from '../factories/FabricaProjeto';
-import type { CatalogoPrototipos } from '../prototypes/RegistroPrototipos';
-import type { CatalogoEstrategias } from '../strategies/RecomendacaoStrategy';
-import type { Relogio } from './contratos';
-import type { GeracaoDeRelatorio, RelatorioCompleto } from './GeradorDeRelatorio';
-import type { ServicoDeConvites } from './GestorDeConvites';
-import type { EquipeRecomendada, RecomendadorDeEquipes } from './OrquestradorDeRecomendacao';
-import type { CriterioDeReavaliacao } from './PoliticaDeReavaliacao';
-import type { EventosDeRecomendacao, MotivoDaRecomendacao } from './PublicadorDeEventosDeRecomendacao';
+import type { RecomendacaoStrategy } from '../strategies/RecomendacaoStrategy';
+import type { DependenciasSistemaRecomendacao, ResultadoAlteracaoProjeto, ResultadoRecomendacao, ResultadoRespostaConvite } from './contratosDoSistema';
+import type { ArquivoComConteudo, ArquivoDoProjeto, NovoArquivo } from './GestorDeArquivos';
+import type { AvaliacaoRegistrada } from './GestorDeAvaliacoes';
+import type { PagamentoDoMembro, SituacaoDoPagamento } from './GestorDePagamentos';
+import type { RelatorioCompleto } from './GeradorDeRelatorio';
+import type { EquipeRecomendada } from './OrquestradorDeRecomendacao';
+import type { MotivoDaRecomendacao } from './PublicadorDeEventosDeRecomendacao';
 
-export interface DependenciasSistemaRecomendacao {
-  projetos: ProjetoRepository;
-  recomendacoes: RecomendacaoRepository;
-  profissionais: FonteDeProfissionais;
-  catalogoDeProfissionais: CicloDeVidaDoCatalogo;
-  fabricas: CatalogoFabricas;
-  estrategias: CatalogoEstrategias;
-  prototipos: CatalogoPrototipos;
-  recomendador: RecomendadorDeEquipes;
-  convites: ServicoDeConvites;
-  relatorios: GeracaoDeRelatorio;
-  eventos: EventosDeRecomendacao;
-  reavaliacao: CriterioDeReavaliacao;
-  relogio: Relogio;
-}
-
-export interface ResultadoRecomendacao {
-  projeto: Projeto;
-  recomendacao: Recomendacao;
-  fonteProfissionais: OrigemDosProfissionais;
-}
-
-export interface ResultadoAlteracaoProjeto {
-  projeto: Projeto;
-  alteracao: ResultadoAlteracao;
-  reavaliada: boolean;
-  recomendacao: Recomendacao | null;
-}
-
-export interface ResultadoRespostaConvite {
-  convite: Convite;
-  recomendacao: Recomendacao;
-  equipeFinalizada: boolean;
-}
+export type { DependenciasSistemaRecomendacao, ResultadoAlteracaoProjeto, ResultadoRecomendacao, ResultadoRespostaConvite } from './contratosDoSistema';
 
 interface RecomendacaoEProjeto {
   recomendacao: Recomendacao;
   projeto: Projeto;
 }
 
-// Fachada dos casos de uso: carrega, delega aos colaboradores, salva e publica os eventos.
 export class SistemaRecomendacao {
-  constructor(private readonly deps: DependenciasSistemaRecomendacao) {}
+  private adaptadorArmazenamento: AdaptadorArmazenamento;
+  private adaptadorPagamento: AdaptadorPagamento;
+  private adaptadorProfissional: AdaptadorProfissional;
+  private estrategiaAtual: RecomendacaoStrategy;
+
+  constructor(private readonly deps: DependenciasSistemaRecomendacao) {
+    this.adaptadorArmazenamento = deps.adaptadorArmazenamento;
+    this.adaptadorPagamento = deps.adaptadorPagamento;
+    this.adaptadorProfissional = deps.adaptadorProfissional;
+    this.estrategiaAtual = deps.estrategias.obter(ESTRATEGIA_PADRAO);
+  }
+
+  configurarAdaptadores(armazenamento: AdaptadorArmazenamento, pagamento: AdaptadorPagamento, profissional: AdaptadorProfissional): void {
+    this.adaptadorArmazenamento = armazenamento;
+    this.adaptadorPagamento = pagamento;
+    this.adaptadorProfissional = profissional;
+    this.deps.catalogoDeProfissionais.trocarOrigem(profissional);
+  }
+
+  definirEstrategia(estrategia: RecomendacaoStrategy): void {
+    this.deps.estrategias.obter(estrategia.tipo);
+    this.estrategiaAtual = estrategia;
+  }
+
+  async executarRecomendacao(projeto: Projeto): Promise<Equipe> {
+    return (await this.recomendarProjeto(projeto)).recomendacao;
+  }
 
   recomendar(dados: DadosProjeto): Promise<ResultadoRecomendacao> {
-    return this.recomendarProjeto(this.deps.fabricas.obter(dados.tipoCaptacao).criarProjeto(dados));
+    const fabrica = this.deps.fabricas.obter(dados.tipoCaptacao);
+    return this.recomendarProjeto(fabrica.criarProjeto({ ...dados, estrategia: dados.estrategia ?? this.estrategiaAtual.tipo }));
   }
 
   recomendarAPartirDoModelo(modelo: string, ajustes: AjustesProjeto & { tipoCaptacao?: TipoCaptacao }): Promise<ResultadoRecomendacao> {
@@ -165,6 +157,40 @@ export class SistemaRecomendacao {
   async gerarRelatorio(recomendacaoId: string): Promise<RelatorioCompleto> {
     const { recomendacao, projeto } = await this.obterRecomendacaoEProjeto(recomendacaoId);
     return this.deps.relatorios.gerar(projeto, recomendacao, this.deps.fabricas.obter(projeto.tipoCaptacao));
+  }
+
+  async anexarArquivo(projetoId: string, arquivo: NovoArquivo): Promise<ArquivoDoProjeto> {
+    return this.deps.arquivos.anexar(this.adaptadorArmazenamento, await this.obterProjeto(projetoId), arquivo);
+  }
+
+  async listarArquivos(projetoId: string): Promise<ArquivoDoProjeto[]> {
+    return this.deps.arquivos.listar(this.adaptadorArmazenamento, await this.obterProjeto(projetoId));
+  }
+
+  async obterArquivo(projetoId: string, arquivoId: string): Promise<ArquivoComConteudo> {
+    return this.deps.arquivos.obter(this.adaptadorArmazenamento, await this.obterProjeto(projetoId), arquivoId);
+  }
+
+  async pagarMembro(recomendacaoId: string, papel: PapelTecnico): Promise<PagamentoDoMembro> {
+    const adaptador = this.adaptadorPagamento;
+    const { recomendacao, projeto } = await this.obterRecomendacaoEProjeto(recomendacaoId);
+    return this.deps.pagamentos.pagarMembro(adaptador, projeto, recomendacao, papel);
+  }
+
+  consultarPagamento(pagamentoId: string): Promise<SituacaoDoPagamento> {
+    return this.deps.pagamentos.consultar(this.adaptadorPagamento, pagamentoId);
+  }
+
+  cancelarPagamento(pagamentoId: string): Promise<SituacaoDoPagamento> {
+    return this.deps.pagamentos.cancelar(this.adaptadorPagamento, pagamentoId);
+  }
+
+  detalharProfissional(profissionalId: string): Promise<Profissional> {
+    return this.adaptadorProfissional.detalharProfissional(profissionalId);
+  }
+
+  avaliarProfissional(profissionalId: string, avaliacao: AvaliacaoProfissional): Promise<AvaliacaoRegistrada> {
+    return this.deps.avaliacoes.avaliar(this.adaptadorProfissional, profissionalId, avaliacao);
   }
 
   iniciarCatalogo(): Promise<void> {

@@ -7,6 +7,9 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 import { ErroDominio } from './domain/errors';
+import { arquivosRoutes } from './routes/arquivos.routes';
+import { pagamentosRoutes } from './routes/pagamentos.routes';
+import { profissionaisRoutes } from './routes/profissionais.routes';
 import { recomendacaoRoutes } from './routes/recomendacao.routes';
 import type { SistemaRecomendacao } from './services/SistemaRecomendacao';
 
@@ -25,6 +28,9 @@ export function construirApp(opcoes: OpcoesApp): FastifyInstance {
   app.addHook('preValidation', rejeitarCaractereNulo);
   app.get('/health', async () => ({ status: 'ok' }));
   app.register(recomendacaoRoutes, { service });
+  app.register(arquivosRoutes, { service });
+  app.register(pagamentosRoutes, { service });
+  app.register(profissionaisRoutes, { service });
   return app;
 }
 
@@ -45,7 +51,6 @@ function rotaInexistente(request: FastifyRequest, reply: FastifyReply): FastifyR
   return reply.code(404).send({ erro: 'NAO_ENCONTRADO', mensagem: `Rota ${request.method} ${request.url} não existe` });
 }
 
-// O Postgres não grava texto com \u0000; sem esta checagem a requisição viraria 500 no banco.
 async function rejeitarCaractereNulo(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | undefined> {
   if (!contemCaractereNulo(request.body)) return undefined;
   return reply.code(STATUS_REQUISICAO_INVALIDA).send({ erro: 'REQUISICAO_INVALIDA', mensagem: 'Texto com caractere nulo (U+0000) não é aceito' });
@@ -58,8 +63,6 @@ function contemCaractereNulo(valor: unknown): boolean {
   return Object.entries(valor).some(([chave, item]) => chave.includes('\u0000') || contemCaractereNulo(item));
 }
 
-// Erros de schema e 4xx do próprio Fastify (JSON malformado, Content-Length errado) são culpa do
-// cliente e não podem virar 500.
 function statusDeErroDoCliente(erro: FastifyError): number | undefined {
   if (erro.validation) return STATUS_REQUISICAO_INVALIDA;
   const { statusCode } = erro;

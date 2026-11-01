@@ -1,3 +1,4 @@
+import type { AdaptadorProfissional } from '../adaptadores/profissional/AdaptadorProfissional';
 import type { Profissional } from '../domain/entities/Profissional';
 import type {
   CicloDeVidaDoCatalogo,
@@ -6,9 +7,7 @@ import type {
   OrigemDosProfissionais,
   ResultadoBusca,
 } from '../domain/ports/FonteDeProfissionais';
-import type { ProfissionalRepository } from '../domain/ports/ProfissionalRepository';
 
-// Abaixo dos 2 s exigidos para a recomendação.
 export const TIMEOUT_PADRAO_MS = 1500;
 export const TTL_CATALOGO_PADRAO_MS = 60000;
 
@@ -24,16 +23,15 @@ interface Catalogo {
   carregadoEm: number;
 }
 
-// Catálogo em memória para não consultar o banco a cada requisição; em falha do repositório,
-// devolve o último catálogo (CACHE) ou vazio (INDISPONIVEL), sem lançar erro.
 export class FonteProfissionaisResiliente implements FonteDeProfissionais, CicloDeVidaDoCatalogo {
   private catalogo: Catalogo | undefined;
   private cargaEmAndamento: Promise<Catalogo> | undefined;
   private temporizador: NodeJS.Timeout | undefined;
+  private geracaoDaOrigem = 0;
   private readonly opcoes: OpcoesFonteResiliente;
 
   constructor(
-    private readonly repositorio: ProfissionalRepository,
+    private origem: AdaptadorProfissional,
     opcoes: Partial<OpcoesFonteResiliente> = {},
   ) {
     this.opcoes = { timeoutMs: TIMEOUT_PADRAO_MS, ttlMs: TTL_CATALOGO_PADRAO_MS, ...opcoes };
@@ -52,7 +50,7 @@ export class FonteProfissionaisResiliente implements FonteDeProfissionais, Ciclo
 
   async buscarPorIds(ids: readonly string[]): Promise<ResultadoBusca> {
     try {
-      const profissionais = await this.comTimeout(this.repositorio.buscarPorIds(ids));
+      const profissionais = await this.comTimeout(this.origem.listarProfissionais({ ids }));
       return { profissionais, fonte: 'REPOSITORIO' };
     } catch (erro) {
       this.opcoes.aoFalhar?.(erro, 'buscarPorIds');
@@ -67,6 +65,13 @@ export class FonteProfissionaisResiliente implements FonteDeProfissionais, Ciclo
 
   invalidar(): void {
     if (this.catalogo) this.catalogo = { ...this.catalogo, carregadoEm: Number.NEGATIVE_INFINITY };
+  }
+
+  trocarOrigem(adaptador: AdaptadorProfissional): void {
+    this.origem = adaptador;
+    this.geracaoDaOrigem += 1;
+    this.cargaEmAndamento = undefined;
+    this.invalidar();
   }
 
   async iniciar(): Promise<void> {
@@ -110,24 +115,28 @@ export class FonteProfissionaisResiliente implements FonteDeProfissionais, Ciclo
     }
   }
 
-  // Chamadas simultâneas reaproveitam a mesma consulta; uma carga lenta não é cancelada pelo
-  // timeout: ela termina e atualiza o catálogo para as próximas buscas.
   private carregarUmaVezPorVez(): Promise<Catalogo> {
-    this.cargaEmAndamento ??= this.repositorio
-      .listarTodos()
+    this.cargaEmAndamento ??= this.carregarDaOrigemAtual();
+    return this.cargaEmAndamento;
+  }
+
+  private carregarDaOrigemAtual(): Promise<Catalogo> {
+    const geracao = this.geracaoDaOrigem;
+    const carga = this.origem
+      .listarProfissionais({})
       .then((lista) => {
         const catalogo: Catalogo = {
           profissionais: lista,
           porId: new Map(lista.map((p) => [p.id, p])),
           carregadoEm: Date.now(),
         };
-        this.catalogo = catalogo;
+        if (geracao === this.geracaoDaOrigem) this.catalogo = catalogo;
         return catalogo;
       })
       .finally(() => {
-        this.cargaEmAndamento = undefined;
+        if (this.cargaEmAndamento === carga) this.cargaEmAndamento = undefined;
       });
-    return this.cargaEmAndamento;
+    return carga;
   }
 
   private comTimeout<T>(promessa: Promise<T>): Promise<T> {

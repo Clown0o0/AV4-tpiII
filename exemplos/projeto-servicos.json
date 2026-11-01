@@ -1,0 +1,31 @@
+{
+  "titulo": "Travessia",
+  "produtorId": "produtor-4",
+  "produtorEmail": "produtora@exemplo.dev",
+  "genero": "Aventura",
+  "duracaoEstimadaMin": 110,
+  "orcamentoTotal": 200000,
+  "dataEntrega": "2026-12-14",
+  "tipoCaptacao": "FICCAO",
+  "localizacao": "São Paulo",
+  "estrategia": "COSSENO",
+  "servicoPrincipal": {
+    "tipo": "PACOTE",
+    "nome": "Longa-metragem",
+    "servicos": [
+      { "tipo": "ATOMICO", "nome": "Direção", "papel": "DIRETOR", "custo": 20000, "prazoDias": 20, "peso": 3 },
+      {
+        "tipo": "PACOTE",
+        "nome": "Pós-produção",
+        "servicos": [
+          { "tipo": "ATOMICO", "nome": "Edição de vídeo", "papel": "EDITOR", "custo": 4500, "prazoDias": 5 },
+          {
+            "tipo": "PACOTE",
+            "nome": "Som",
+            "servicos": [{ "tipo": "ATOMICO", "nome": "Mixagem de áudio", "papel": "SONOPLASTA", "custo": 3000, "prazoDias": 3 }]
+          }
+        ]
+      }
+    ]
+  }
+}

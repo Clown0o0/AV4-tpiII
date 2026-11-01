@@ -16,7 +16,6 @@ export interface MensagemInterna {
   criadaEm: Date;
 }
 
-// Mensagens da plataforma (simuladas em memória): caixa de entrada por destinatário.
 export class MensagemInternaObservador implements Observador {
   readonly nome = 'mensagem-interna';
   private readonly caixas = new Map<string, MensagemInterna[]>();

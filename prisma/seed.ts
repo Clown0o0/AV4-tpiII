@@ -1,13 +1,4 @@
 // submarino
-/**
- * APOIO A TESTES MANUAIS.
- * Existe apenas para que haja profissionais no banco ao chamar a API localmente.
- *
- * Popula o banco com profissionais fictícios (determinístico).
- *   npm run db:seed                         -> 300 profissionais
- *   SEED_PROFISSIONAIS=10000 npm run db:seed -> teste de escala
- * (No PowerShell: $env:SEED_PROFISSIONAIS=10000; npm run db:seed)
- */
 import { randomUUID } from 'node:crypto';
 import { Prisma, PrismaClient, type PapelTecnico } from '@prisma/client';
 import { LeitorDeAmbiente, lerOuEncerrar, type Ambiente } from '../src/composicao/configuracao';
@@ -16,7 +7,6 @@ import { PAPEIS_TECNICOS, PERFIL_PADRAO_POR_PAPEL } from '../src/domain/entities
 try {
   process.loadEnvFile();
 } catch {
-  // variáveis já definidas no ambiente
 }
 
 const TOTAL = lerOuEncerrar(() => lerTotalDeProfissionais(process.env));
@@ -36,7 +26,6 @@ function lerTotalDeProfissionais(ambiente: Ambiente): number {
   return total;
 }
 
-// PRNG determinístico (mulberry32) para que o seed seja reproduzível.
 let estado = 42;
 function aleatorio(): number {
   estado = (estado + 0x6d2b79f5) | 0;
@@ -96,7 +85,6 @@ async function main(): Promise<void> {
       if (aleatorio() < 0.5) niveis.set(escolher(EXTRAS), arred(aleatorio(), 3));
       for (const [nome, nivel] of niveis) competencias.push({ id: randomUUID(), profissionalId: id, nome, nivel });
 
-      // Disponível de ~1 mês atrás até 3–18 meses à frente (alguns com agenda curta).
       const fim = new Date(hoje);
       fim.setMonth(fim.getMonth() + 3 + Math.floor(aleatorio() * 16));
       const comeco = new Date(hoje);

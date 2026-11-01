@@ -8,19 +8,14 @@ import {
 } from './RecomendacaoStrategy';
 
 export interface RegrasOrcamentoReduzido {
-  // Média mínima exigida de quem já tem avaliações suficientes.
   notaMinima: number;
-  // Nº de avaliações a partir do qual a nota mínima é aplicada.
   avaliacoesParaExigirNota: number;
   pesoEconomia: number;
   pesoLocalizacao: number;
   pesoReputacao: number;
-  // Reputação assumida para quem ainda não foi avaliado (0..1).
   reputacaoPadrao: number;
 }
 
-// Regras padrão para orçamento reduzido.
-// Para usar outras, passe um objeto diferente no construtor.
 export const REGRAS_PADRAO: RegrasOrcamentoReduzido = {
   notaMinima: 3,
   avaliacoesParaExigirNota: 2,
@@ -30,8 +25,6 @@ export const REGRAS_PADRAO: RegrasOrcamentoReduzido = {
   reputacaoPadrao: 0.6,
 };
 
-// Tira quem cobra mais que a fatia do papel ou tem nota baixa comprovada; entre o resto,
-// favorece quem é mais barato, da mesma cidade e bem avaliado.
 export class OrcamentoReduzidoStrategy implements RecomendacaoStrategy {
   readonly tipo = 'ORCAMENTO_REDUZIDO' as const;
   readonly descricao = 'Regras de negócio para orçamento reduzido: economia, profissionais locais e reputação mínima';

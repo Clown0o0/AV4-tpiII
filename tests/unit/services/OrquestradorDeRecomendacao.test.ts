@@ -1,3 +1,4 @@
+import { AdaptadorInterno } from '../../../src/adaptadores/profissional/AdaptadorInterno';
 import type { FabricaProjeto } from '../../../src/factories/FabricaProjeto';
 import { RegistroFabricas } from '../../../src/factories/RegistroFabricas';
 import { OrquestradorPadrao } from '../../../src/orchestration/OrquestradorPadrao';
@@ -13,7 +14,7 @@ function montar() {
   const recomendador = new OrquestradorDeRecomendacao({
     fabricas: RegistroFabricas.padrao(),
     estrategias: RegistroEstrategias.padrao(),
-    profissionais: new FonteProfissionaisResiliente(repositorio, { ttlMs: 0, timeoutMs: 100 }),
+    profissionais: new FonteProfissionaisResiliente(new AdaptadorInterno(repositorio), { ttlMs: 0, timeoutMs: 100 }),
     criarOrquestrador,
     relogio: () => DATA_REFERENCIA,
   });

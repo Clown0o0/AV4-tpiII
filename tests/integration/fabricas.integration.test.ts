@@ -32,11 +32,6 @@ interface RespostaRecomendacao {
   fonteProfissionais: OrigemDosProfissionais;
 }
 
-// ---------------------------------------------------------------------------------------------
-// Tipo novo definido SÓ aqui: realidade virtual. Prova que um tipo novo não exige mudar
-// OrquestradorEquipe, OrquestradorPadrao nem SistemaRecomendacao.
-// (Um tipo novo de verdade também entraria em TIPOS_CAPTACAO e no enum do banco.)
-// ---------------------------------------------------------------------------------------------
 const REALIDADE_VIRTUAL = 'REALIDADE_VIRTUAL' as TipoCaptacao;
 
 class ProjetoRealidadeVirtual extends ProjetoBase {
@@ -83,9 +78,6 @@ class FabricaRealidadeVirtual extends FabricaProjetoBase {
   criarRelatorio = () => new RelatorioVisitor();
 }
 
-// ---------------------------------------------------------------------------------------------
-
-/** Sobe o app como o server.ts: registro padrão (+ extras) e um notificador por fábrica, uma vez. */
 function montarApp(extras: FabricaProjeto[] = []) {
   const logger = new LoggerMemoria();
   const fabricas = RegistroFabricas.padrao({ logger });
@@ -134,8 +126,6 @@ async function recomendar(app: FastifyInstance, payload: object): Promise<Respos
 }
 
 describe('Fábricas: a mesma requisição com tipos diferentes gera ecossistemas coerentes com o tipo', () => {
-  // Scores esperados com cosseno (DIRETOR-top e EDITOR-top têm o perfil padrão do papel):
-  //   documentário valoriza narrativa (DIRETOR tem 0.8); publicitário valoriza ritmo e color_grading (EDITOR tem 0.8 e 0.5).
   it.each([
     ['FICCAO', { DIRETOR: 1, EDITOR: 1 }, null, true, null],
     ['DOCUMENTARIO', { DIRETOR: 0.8533, EDITOR: 0.8 }, { tema: 'drama', entrevistados: [] }, false, 'Documentário exige o papel ROTEIRISTA'],
@@ -145,21 +135,17 @@ describe('Fábricas: a mesma requisição com tipos diferentes gera ecossistemas
     const { app, eventos, avisos, email } = montarApp();
     const { projeto, recomendacao } = await recomendar(app, { ...corpoBase, tipoCaptacao: tipo });
 
-    // projeto do tipo, com os atributos específicos padrão
     expect(projeto.tipoCaptacao).toBe(tipo);
     expect(projeto.detalhes).toEqual(detalhes);
-    // recomendação: mesma estratégia escolhida, scores ajustados pelo recomendador do tipo
     expect(recomendacao.estrategia).toBe('COSSENO');
     expect(Object.fromEntries(recomendacao.equipe.map((m) => [m.papel, m.score]))).toEqual(scores);
 
-    // validação do relatório: regras do tipo
     const { validacao, relatorio } = (await app.inject(`/recomendacoes/${recomendacao.id}/relatorio`)).json();
     expect(validacao.valida).toBe(valida);
     if (erroDoTipo) expect(validacao.erros).toEqual([erroDoTipo]);
     else expect(validacao.erros).toEqual([]);
     expect(relatorio.projeto.detalhes).toEqual(detalhes);
 
-    // notificações: só o notificador do tipo fala, e também em evento sem `projeto` (rejeição)
     await app.inject({ method: 'POST', url: `/recomendacoes/${recomendacao.id}/membros/EDITOR/rejeitar` });
     await eventos.aguardarPendentes();
     for (const outro of ['DOCUMENTARIO', 'ANIMACAO', 'PUBLICITARIO'] as const) {
@@ -167,7 +153,6 @@ describe('Fábricas: a mesma requisição com tipos diferentes gera ecossistemas
     }
     expect(avisos(tipo).map((n) => n.evento)).toEqual(tipo === 'FICCAO' ? [] : ['recomendacao.gerada', 'membro.rejeitado']);
     expect(avisos(tipo).every((n) => n.projetoId === projeto.id)).toBe(true);
-    // os observadores genéricos seguem funcionando para todos os tipos
     expect(email.enviados[0]?.assunto).toBe('Equipe recomendada para "Rio Aberto"');
     await app.close();
   });
@@ -181,7 +166,6 @@ describe('Fábricas: a mesma requisição com tipos diferentes gera ecossistemas
         expect(relatorio).not.toHaveProperty('metricasRenderizacao');
         continue;
       }
-      // 95 min * 60 s * 24 qps (padrão da animação)
       expect(relatorio.metricasRenderizacao).toEqual({
         descricao: expect.stringMatching(/^Estimativas/),
         tecnica: '2D',
@@ -197,7 +181,6 @@ describe('Fábricas: a mesma requisição com tipos diferentes gera ecossistemas
 
   it('o mesmo serviço troca de fábrica a cada pedido sem misturar famílias', async () => {
     const criados: Array<[TipoCaptacao, string]> = [];
-    // Espia: delega à fábrica real e anota a classe de cada objeto criado.
     const espiar = (fabrica: FabricaProjeto): FabricaProjeto => {
       const anotar = <T extends object>(objeto: T): T => {
         criados.push([fabrica.tipo, objeto.constructor.name]);
@@ -271,7 +254,6 @@ describe('Extensibilidade: tipo novo (realidade virtual) sem tocar no orquestrad
 
     expect(projeto).toMatchObject({ tipoCaptacao: REALIDADE_VIRTUAL, detalhes: { plataforma: 'Apple Vision Pro' } });
     expect(projetos.projetos.get(projeto.id)).toBeInstanceOf(ProjetoRealidadeVirtual);
-    // DIRETOR_FOTOGRAFIA-top tem camera 0.8 -> afinidade (0.8 + 0) / 2 = 0.4
     expect(recomendacao.equipe.find((m) => m.papel === 'DIRETOR_FOTOGRAFIA')?.score).toBe(0.88);
 
     const sub = await app.inject({ method: 'POST', url: `/recomendacoes/${recomendacao.id}/membros/DIRETOR/substituir` });
@@ -358,7 +340,6 @@ describe('Projetos-modelo (Prototype) pela API', () => {
     expect(projeto.papeis.map((p) => p.papel)).toEqual(['DIRETOR', 'EFEITOS_VISUAIS', 'SONOPLASTA']);
     expect(recomendacao.estrategia).toBe('ORCAMENTO_REDUZIDO');
 
-    // dois pedidos do mesmo modelo são projetos independentes
     const outro = await recomendar(ctx.app, { ...pedido, modelo: 'animacao', papeis: [{ papel: 'DIRETOR', peso: 1 }], tipoCaptacao: 'ANIMACAO' });
     expect(outro.projeto.id).not.toBe(projeto.id);
     expect(outro.projeto.papeis).toEqual([{ papel: 'DIRETOR', peso: 1 }]);

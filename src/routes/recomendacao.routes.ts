@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { AjustesProjeto, DadosProjeto, PapelTecnico, TipoCaptacao, TipoEstrategia } from '../domain/entities/Projeto';
+import { lerServicoProjeto } from '../servicos-projeto/lerServicoProjeto';
 import type { ResultadoRecomendacao, SistemaRecomendacao } from '../services/SistemaRecomendacao';
 import {
   schemaAlteracaoProjeto,
@@ -20,6 +21,7 @@ interface CamposComunsDoProjeto {
   localizacao: string;
   estrategia?: TipoEstrategia;
   detalhes?: Record<string, unknown>;
+  servicoPrincipal?: Record<string, unknown>;
 }
 
 interface PapelNoCorpo {
@@ -33,7 +35,7 @@ interface CorpoProjetoCompleto extends CamposComunsDoProjeto {
   genero: string;
   duracaoEstimadaMin: number;
   tipoCaptacao: TipoCaptacao;
-  papeis: PapelNoCorpo[];
+  papeis?: PapelNoCorpo[];
 }
 
 interface CorpoProjetoAPartirDoModelo extends CamposComunsDoProjeto {
@@ -95,17 +97,19 @@ function recomendarPeloCorpo(service: SistemaRecomendacao, corpo: CorpoProjeto):
 }
 
 function dadosDoCorpoCompleto(corpo: CorpoProjetoCompleto): DadosProjeto {
-  const { modelo: _modelo, dataEntrega, ...dados } = corpo;
-  return { ...dados, dataEntrega: dataDoCorpo(dataEntrega) };
+  const { modelo: _modelo, dataEntrega, servicoPrincipal, ...dados } = corpo;
+  return { ...dados, dataEntrega: dataDoCorpo(dataEntrega), ...servicoDoCorpo(servicoPrincipal) };
 }
 
 function ajustesDoCorpo(corpo: CorpoProjetoAPartirDoModelo): AjustesProjeto & { tipoCaptacao?: TipoCaptacao } {
-  const { modelo: _modelo, dataEntrega, ...ajustes } = corpo;
-  return { ...ajustes, dataEntrega: dataDoCorpo(dataEntrega) };
+  const { modelo: _modelo, dataEntrega, servicoPrincipal, ...ajustes } = corpo;
+  return { ...ajustes, dataEntrega: dataDoCorpo(dataEntrega), ...servicoDoCorpo(servicoPrincipal) };
 }
 
-// new Date('2026-02-30') vira 2 de março; aqui o dia precisa existir no calendário.
-// Data inválida segue adiante e o domínio responde "Data de entrega inválida".
+function servicoDoCorpo(servicoPrincipal: Record<string, unknown> | undefined): Pick<DadosProjeto, 'servicoPrincipal'> {
+  return servicoPrincipal === undefined ? {} : { servicoPrincipal: lerServicoProjeto(servicoPrincipal) };
+}
+
 function dataDoCorpo(texto: string): Date {
   const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto);
   if (!partes) return new Date(texto);

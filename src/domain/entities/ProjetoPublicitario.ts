@@ -10,7 +10,6 @@ export type DetalhesPublicitario = {
 
 export class ProjetoPublicitario extends Projeto {
   readonly canais: readonly string[];
-  // Sem valor informado, a marca é o título e a duração máxima é a duração estimada.
   private readonly marcaInformada: string | undefined;
   private readonly duracaoMaxInformada: number | undefined;
 

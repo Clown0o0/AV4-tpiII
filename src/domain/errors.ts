@@ -1,4 +1,3 @@
-// Cada erro de domínio sabe o próprio status HTTP: um erro novo não exige mudar a camada HTTP.
 export abstract class ErroDominio extends Error {
   abstract readonly codigo: string;
   abstract readonly codigoHttp: number;

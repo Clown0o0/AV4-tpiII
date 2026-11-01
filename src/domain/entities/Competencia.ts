@@ -1,7 +1,6 @@
 import { obterOuCalcular } from '../../compartilhado/memoizacao';
 import { ErroValidacao } from '../errors';
 
-// Vetor esparso de competências técnicas: nome da competência -> nível (0..1).
 export type VetorCompetencias = Readonly<Record<string, number>>;
 
 export class Competencia {
@@ -32,7 +31,6 @@ export class Competencia {
   }
 }
 
-// Cache porque os vetores são imutáveis e a mesma norma é pedida para cada candidato.
 const CACHE_NORMAS = new WeakMap<object, number>();
 
 function normaAoQuadrado(vetor: VetorCompetencias): number {

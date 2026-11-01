@@ -4,7 +4,6 @@ import { ErroValidacao } from '../errors';
 export interface DadosAvaliacao {
   id?: string;
   profissionalId: string;
-  // Produtor que avaliou o profissional.
   autorId: string;
   projetoId?: string | null;
   nota: number;

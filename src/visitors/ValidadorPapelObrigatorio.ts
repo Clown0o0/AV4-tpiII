@@ -1,8 +1,6 @@
 import type { PapelTecnico, Projeto } from '../domain/entities/Projeto';
 import { ValidacaoConsistenciaVisitor } from './ValidacaoConsistenciaVisitor';
 
-// Regra de um tipo de projeto: o papel informado é obrigatório. Projetos de outros tipos não
-// são afetados; a subclasse chama aplicarRegraAo() só ao visitar um projeto do próprio tipo.
 export abstract class ValidadorPapelObrigatorio extends ValidacaoConsistenciaVisitor {
   private projetoDoTipo: Projeto | undefined;
 

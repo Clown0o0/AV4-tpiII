@@ -17,7 +17,6 @@ interface ScriptExemplos {
 
 const script: ScriptExemplos = require('../../../exemplos/atualizar-datas.js');
 
-// Disco em memória: só o que o script usa.
 function discoEmMemoria(arquivos: Record<string, string>) {
   const conteudo = new Map(Object.entries(arquivos));
   const pastasCriadas: string[] = [];

@@ -5,7 +5,6 @@ import { ProjetoDocumentario } from '../domain/entities/ProjetoDocumentario';
 import { ProjetoPublicitario } from '../domain/entities/ProjetoPublicitario';
 import { Projeto, type AjustesProjeto, type DadosProjeto } from '../domain/entities/Projeto';
 
-// Campos que todo pedido com `modelo` precisa informar (a rota exige); no modelo são só marcadores.
 const BASE_MODELO: Omit<DadosProjeto, 'genero' | 'duracaoEstimadaMin' | 'tipoCaptacao' | 'papeis'> = {
   titulo: 'Modelo',
   produtorId: 'modelo',
@@ -19,12 +18,9 @@ export interface CatalogoPrototipos {
   chaves(): string[];
 }
 
-// Prototype: guarda um projeto-modelo por chave e cria novos projetos clonando o modelo
-// e aplicando os ajustes (que passam pela validação do construtor).
 export class RegistroPrototipos implements CatalogoPrototipos {
   private readonly prototipos = new Map<string, Projeto>();
 
-  // Um projeto-modelo inicial por tipo.
   static padrao(): RegistroPrototipos {
     const registro = new RegistroPrototipos();
     registro.registrar('ficcao', modeloFiccao());
@@ -34,7 +30,6 @@ export class RegistroPrototipos implements CatalogoPrototipos {
     return registro;
   }
 
-  // Guarda uma cópia: mudar o objeto passado depois não altera o modelo.
   registrar(chave: string, prototipo: Projeto): void {
     this.prototipos.set(chave, prototipo.clonar());
   }
@@ -95,7 +90,6 @@ function modeloAnimacao(): ProjetoAnimacao {
   });
 }
 
-// 60 s: a duração estimada é em minutos inteiros (1 min) e o validador do tipo exige estimada <= máxima.
 function modeloPublicitario(): ProjetoPublicitario {
   return new ProjetoPublicitario({
     ...BASE_MODELO,

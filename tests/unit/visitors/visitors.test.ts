@@ -55,9 +55,7 @@ describe('Visitor — resultados diferentes sobre a mesma estrutura, sem alterar
     expect(relatorio.financeiro).toEqual({ orcamentoTotal: 60000, custoEquipe: 45000, saldo: 15000, percentualUtilizado: 75 });
     expect(relatorio.texto).toContain('Relatório da equipe — Filme Teste');
 
-    // Três visitors, três tipos de resultado distintos...
     expect(new Set([validacao, compatibilidade, relatorio].map((r) => Object.keys(r).join()))).toHaveProperty('size', 3);
-    // ...e nenhuma entidade visitada foi modificada.
     expect(fotografia(projeto, recomendacao, recomendacao.membros, profissionais)).toBe(antes);
   });
 

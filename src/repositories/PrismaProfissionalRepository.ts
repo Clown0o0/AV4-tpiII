@@ -3,6 +3,7 @@ import { Avaliacao } from '../domain/entities/Avaliacao';
 import { Competencia } from '../domain/entities/Competencia';
 import { Profissional } from '../domain/entities/Profissional';
 import type { ProfissionalRepository } from '../domain/ports/ProfissionalRepository';
+import { ehUuid } from './identificadores';
 
 const INCLUDE_PROFISSIONAL = {
   competencias: true,
@@ -17,7 +18,6 @@ export type ProfissionalPersistido = Prisma.ProfissionalGetPayload<{ include: ty
 export class PrismaProfissionalRepository implements ProfissionalRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Lê o cadastro em páginas por id; entre uma página e outra o event loop atende outras requisições.
   async listarTodos(): Promise<Profissional[]> {
     const profissionais: Profissional[] = [];
     let cursor: string | undefined;
@@ -46,6 +46,26 @@ export class PrismaProfissionalRepository implements ProfissionalRepository {
       include: INCLUDE_PROFISSIONAL,
     });
     return registros.map(paraDominio);
+  }
+
+  async buscarPorId(id: string): Promise<Profissional | null> {
+    if (!ehUuid(id)) return null;
+    const registro = await this.prisma.profissional.findUnique({ where: { id }, include: INCLUDE_PROFISSIONAL });
+    return registro ? paraDominio(registro) : null;
+  }
+
+  async registrarAvaliacao(avaliacao: Avaliacao): Promise<void> {
+    await this.prisma.avaliacao.create({
+      data: {
+        id: avaliacao.id,
+        profissionalId: avaliacao.profissionalId,
+        autorId: avaliacao.autorId,
+        projetoId: avaliacao.projetoId,
+        nota: avaliacao.nota,
+        comentario: avaliacao.comentario,
+        criadaEm: avaliacao.criadaEm,
+      },
+    });
   }
 }
 

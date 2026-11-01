@@ -46,7 +46,6 @@ const CLASSES_DE_TIPO = [
   NotificadorDocumentario, NotificadorAnimacao, NotificadorPublicitario, NotificadorFiccao,
 ];
 
-// Estratégia base fixa: todo candidato vale 0.5, para isolar o efeito do ajuste por tipo.
 const baseFixa: RecomendacaoStrategy = {
   tipo: 'ORCAMENTO_REDUZIDO',
   descricao: 'base de teste',
@@ -72,7 +71,6 @@ describe('Abstract Factory — cada fábrica cria só a família do próprio tip
     expect(familia[1]).toBeInstanceOf(ClasseValidador);
     expect(familia[2]).toBeInstanceOf(ClasseRecomendador);
     expect(familia[3]).toBeInstanceOf(ClasseNotificador);
-    // Nenhum objeto é de uma classe específica de OUTRO tipo.
     const minhas = new Set<unknown>([ClasseProjeto, ClasseValidador, ClasseRecomendador, ClasseNotificador]);
     for (const objeto of familia) {
       for (const Classe of CLASSES_DE_TIPO.filter((c) => !minhas.has(c))) expect(objeto).not.toBeInstanceOf(Classe);
@@ -108,12 +106,10 @@ describe('Recomendadores por tipo (decoram a estratégia escolhida)', () => {
     const recomendador = new Fabrica(OPCOES_FABRICA).comEstrategia(baseFixa).criarRecomendador();
     const ranking = recomendador.recomendar(todos, contexto(todos));
     expect(ranking[0]?.profissional.id).toBe(esperado);
-    // só o especialista do tipo ganha afinidade; o generalista fica com 80% do score base
     expect(ranking.find((c) => c.profissional.id === 'generalista')?.score).toBe(0.4);
     expect(ranking.filter((c) => c.score > 0.4).map((c) => c.profissional.id)).toEqual([esperado]);
     expect(ranking.every((c) => c.score >= 0 && c.score <= 1)).toBe(true);
     expect(ranking[0]?.detalhes).toMatchObject({ base: 1, scoreBase: 0.5 });
-    // tipo e descrição continuam sendo os da estratégia escolhida
     expect(recomendador.tipo).toBe('ORCAMENTO_REDUZIDO');
     expect(recomendador.descricao).toBe('base de teste');
   });
@@ -155,7 +151,6 @@ describe('Validadores por tipo', () => {
     expect(semRoteirista.valida).toBe(false);
     expect(semRoteirista.erros).toEqual(['Documentário exige o papel ROTEIRISTA']);
     expect(validar(anim, anim.criarProjeto(soDiretor('ANIMACAO'))).erros).toEqual(['Animação exige o papel EFEITOS_VISUAIS']);
-    // com o papel exigido, a regra do tipo passa (o papel vazio é erro da validação padrão)
     const comRoteirista = validar(doc, doc.criarProjeto(dadosProjeto({ tipoCaptacao: 'DOCUMENTARIO', papeis: [{ papel: 'DIRETOR', peso: 1 }, { papel: 'ROTEIRISTA', peso: 1 }] })));
     expect(comRoteirista.erros).toEqual(['Papel obrigatório ROTEIRISTA não preenchido']);
   });
@@ -304,7 +299,6 @@ describe('Notificadores por tipo', () => {
 
   it('registro único: cada notificador é adicionado uma vez, e um aviso por evento publicado', async () => {
     const { emitter, enviadas, notificadores } = montar();
-    // 4 notificadores, um por fábrica (o de ficção não reage a nada); adicionar de novo não duplica
     expect(emitter.quantidadeObservadores()).toBe(4);
     emitter.registrar(...Object.values(notificadores));
     expect(emitter.quantidadeObservadores()).toBe(4);

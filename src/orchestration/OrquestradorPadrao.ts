@@ -29,8 +29,6 @@ interface ContextoDeNormalizacao {
   somaPesos: number;
 }
 
-// O ranking vem do recomendador criado pela fábrica recebida, então este orquestrador não
-// conhece o tipo de projeto. O custo de um profissional é o preço mínimo da faixa dele.
 export class OrquestradorPadrao extends OrquestradorEquipe {
   private readonly opcoes: OpcoesOrquestrador;
 
@@ -115,7 +113,6 @@ function agruparPorEspecialidade(universo: readonly Profissional[], alvo: Readon
   for (const profissional of universo) {
     const { especialidades } = profissional;
     for (const [i, papel] of especialidades.entries()) {
-      // Ignora a especialidade repetida e a que não está no alvo.
       if (especialidades.indexOf(papel) !== i || !alvo.has(papel)) continue;
       const lista = porPapel.get(papel);
       if (lista) lista.push(profissional);
@@ -129,7 +126,6 @@ function normalizarPapel(contexto: ContextoDeNormalizacao, requerido: PapelReque
   const { entrada, orcamentoDisponivel } = contexto;
   const peso = requerido.peso / contexto.somaPesos;
   const excluidos = entrada.excluidosPorPapel?.get(requerido.papel);
-  // Lida uma vez: o getter devolve uma cópia nova da data a cada leitura.
   const dataEntrega = entrada.projeto.dataEntrega;
   const candidatos = (contexto.candidatosPorPapel.get(requerido.papel) ?? []).filter(
     (p) =>
@@ -148,8 +144,6 @@ function normalizarPapel(contexto: ContextoDeNormalizacao, requerido: PapelReque
   };
 }
 
-// Escolha gulosa: os papéis de maior peso escolhem primeiro e guardam, para cada papel seguinte,
-// o preço do candidato mais barato ainda livre.
 class EscolhaGulosa {
   private readonly _papeisSemCandidato: PapelTecnico[] = [];
   private readonly _avisos: string[];

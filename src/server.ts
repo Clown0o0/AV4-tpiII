@@ -13,11 +13,12 @@ import { criarSistemaRecomendacao } from './composicao/criarSistemaRecomendacao'
 import { lerConfiguracao, lerOuEncerrar, type Configuracao } from './composicao/configuracao';
 import type { OpcoesFonteResiliente } from './services/FonteProfissionaisResiliente';
 import type { SistemaRecomendacao } from './services/SistemaRecomendacao';
+import { PoliticaDeDecoradores } from './strategies/decoradores/PoliticaDeDecoradores';
+import { RegistroDeAuditoriaNoLogger } from './strategies/decoradores/RegistroDeAuditoriaNoLogger';
 
 try {
   process.loadEnvFile();
 } catch {
-  // Sem .env: usa apenas as variáveis de ambiente do processo.
 }
 
 const configuracao = lerOuEncerrar(() => lerConfiguracao(process.env));
@@ -35,13 +36,15 @@ const app = construirApp({
       projetos: new PrismaProjetoRepository(prisma, fabricas),
       eventos,
       fabricas,
+      provedores: configuracao.provedores,
+      politicaDeDecoradores: new PoliticaDeDecoradores(configuracao.decoradores, configuracao.decoradoresPorProdutor),
+      registroDeAuditoria: new RegistroDeAuditoriaNoLogger(logger),
       opcoesFonte: opcoesDaFonteDeProfissionais(logger, configuracao),
     });
     return servico;
   },
 });
 
-// Um notificador por tipo, registrado uma única vez aqui (nunca por requisição).
 function criarPublicadorDeEventos(logger: FastifyBaseLogger, fabricas: RegistroFabricas): RecomendacaoEventEmitter {
   return new RecomendacaoEventEmitter((erro, evento, observador) =>
     logger.error({ err: erro, evento, observador }, 'falha em observador'),
@@ -70,8 +73,6 @@ async function encerrar(sinal: string): Promise<void> {
   process.exit(0);
 }
 
-// Falha não tratada deixa o processo em estado desconhecido: registra e encerra com código 1.
-// O temporizador garante a saída mesmo se o desligamento do Prisma travar.
 function encerrarPorFalha(erro: unknown, origem: string): void {
   app.log.fatal({ err: erro, origem }, 'falha não tratada; encerrando');
   setTimeout(() => process.exit(1), 3000).unref();
@@ -85,9 +86,9 @@ process.on('unhandledRejection', (motivo) => encerrarPorFalha(motivo, 'unhandled
 process.on('uncaughtException', (erro) => encerrarPorFalha(erro, 'uncaughtException'));
 
 async function iniciar(): Promise<void> {
-  // Carrega o cadastro antes de aceitar requisições, para a primeira não esperar pelo banco.
   await servico?.iniciarCatalogo();
   await app.listen({ port: configuracao.porta, host: configuracao.host });
+  app.log.info({ provedores: configuracao.provedores, decoradores: configuracao.decoradores }, 'configuração ativa');
 }
 
 iniciar().catch(async (erro: unknown) => {

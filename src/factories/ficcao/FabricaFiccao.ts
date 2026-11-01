@@ -5,7 +5,6 @@ import { FabricaProjetoBase } from '../FabricaProjeto';
 import { RelatorioVisitor } from '../../visitors/RelatorioVisitor';
 import { NotificadorFiccao } from './NotificadorFiccao';
 
-// Ficção usa o comportamento padrão: Projeto base, validação padrão e a estratégia escolhida sem ajuste.
 export class FabricaFiccao extends FabricaProjetoBase {
   readonly tipo = 'FICCAO' as const;
 

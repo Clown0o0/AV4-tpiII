@@ -13,6 +13,9 @@ import type { ConviteRepository } from '../domain/ports/ConviteRepository';
 import type { ProjetoRepository } from '../domain/ports/ProjetoRepository';
 import type { RecomendacaoRepository } from '../domain/ports/RecomendacaoRepository';
 import type { CatalogoFabricas } from '../factories/FabricaProjeto';
+import { lerServicoProjeto } from '../servicos-projeto/lerServicoProjeto';
+import { servicoParaJson } from '../servicos-projeto/ServicoJson';
+import { ehUuid } from './identificadores';
 
 type ProjetoPersistido = Prisma.ProjetoGetPayload<{ include: { papeis: true } }>;
 type RecomendacaoPersistida = Prisma.RecomendacaoGetPayload<{ include: { membros: true } }>;
@@ -20,9 +23,12 @@ type MembroPersistido = RecomendacaoPersistida['membros'][number];
 type ConvitePersistido = Prisma.ConviteGetPayload<object>;
 type PapelPersistido = ProjetoPersistido['papeis'][number];
 
-type CamposObrigatoriosDoProjeto = Omit<DadosProjeto, 'id' | 'criadoEm' | 'papeis' | 'detalhes'>;
+type CamposObrigatoriosDoProjeto = Omit<DadosProjeto, 'id' | 'criadoEm' | 'papeis' | 'detalhes' | 'servicoPrincipal'>;
 
-type CamposDoProjeto = Required<CamposObrigatoriosDoProjeto> & { detalhes: Prisma.InputJsonObject | undefined };
+type CamposDoProjeto = Required<CamposObrigatoriosDoProjeto> & {
+  detalhes: Prisma.InputJsonObject | undefined;
+  servicoPrincipal: Prisma.InputJsonObject;
+};
 
 interface CamposDaRecomendacao {
   status: StatusRecomendacao;
@@ -32,16 +38,9 @@ interface CamposDaRecomendacao {
   finalizadaEm: Date | null;
 }
 
-// As chaves são colunas uuid: o Postgres rejeita a consulta com outro formato, e um id assim
-// simplesmente não existe.
-function ehUuid(id: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-}
-
 export class PrismaProjetoRepository implements ProjetoRepository, RecomendacaoRepository, ConviteRepository {
   constructor(
     private readonly prisma: PrismaClient,
-    // Reconstrói o subtipo certo (documentário, animação...) a partir do tipoCaptacao gravado.
     private readonly fabricas: CatalogoFabricas,
   ) {}
 
@@ -134,12 +133,23 @@ function camposDoProjeto(projeto: Projeto): CamposDoProjeto {
     localizacao: projeto.localizacao,
     estrategia: projeto.estrategia,
     detalhes: projeto.detalhes ? detalhesComoJson(projeto.detalhes) : undefined,
+    servicoPrincipal: servicoParaJson(projeto.servicoPrincipal),
   };
 }
 
-// Fronteira com o Prisma: os detalhes já foram validados pelo subtipo do projeto e são JSON puro.
 function detalhesComoJson(detalhes: DetalhesProjeto): Prisma.InputJsonObject {
-  return detalhes as Prisma.InputJsonObject;
+  if (!ehObjetoJsonDeEntrada(detalhes)) throw new TypeError('Os atributos específicos do projeto não são JSON');
+  return detalhes;
+}
+
+function ehObjetoJsonDeEntrada(valor: unknown): valor is Prisma.InputJsonObject {
+  return typeof valor === 'object' && valor !== null && !Array.isArray(valor) && Object.values(valor).every(ehValorJsonDeEntrada);
+}
+
+function ehValorJsonDeEntrada(valor: unknown): boolean {
+  if (valor === null || ['string', 'number', 'boolean'].includes(typeof valor)) return true;
+  if (Array.isArray(valor)) return valor.every(ehValorJsonDeEntrada);
+  return ehObjetoJsonDeEntrada(valor);
 }
 
 function papelParaGravar(projetoId: string, papel: PapelRequerido): Prisma.ProjetoPapelCreateManyInput {
@@ -171,12 +181,12 @@ function membroParaGravar(recomendacaoId: string, membro: MembroRecomendadoLeitu
 }
 
 export function projetoParaDominio(registro: ProjetoPersistido, fabricas: CatalogoFabricas): Projeto {
-  const { papeis, detalhes, orcamentoTotal, ...campos } = registro;
+  const { papeis, detalhes, servicoPrincipal, orcamentoTotal, ...campos } = registro;
   return fabricas.obter(registro.tipoCaptacao).criarProjeto({
     ...campos,
     orcamentoTotal: Number(orcamentoTotal),
     detalhes: ehObjetoJson(detalhes) ? detalhes : null,
-    papeis: papeis.map(papelParaDominio),
+    ...(servicoPrincipal === null ? { papeis: papeis.map(papelParaDominio) } : { servicoPrincipal: lerServicoProjeto(servicoPrincipal) }),
   });
 }
 

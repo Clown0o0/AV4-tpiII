@@ -1,5 +1,6 @@
+import type { Avaliacao } from '../../src/domain/entities/Avaliacao';
 import type { Convite } from '../../src/domain/entities/Convite';
-import type { Profissional } from '../../src/domain/entities/Profissional';
+import { Profissional } from '../../src/domain/entities/Profissional';
 import type { Projeto } from '../../src/domain/entities/Projeto';
 import type { Recomendacao } from '../../src/domain/entities/Recomendacao';
 import type { ProfissionalRepository } from '../../src/domain/ports/ProfissionalRepository';
@@ -7,7 +8,6 @@ import type { ConviteRepository } from '../../src/domain/ports/ConviteRepository
 import type { ProjetoRepository } from '../../src/domain/ports/ProjetoRepository';
 import type { RecomendacaoRepository } from '../../src/domain/ports/RecomendacaoRepository';
 
-/** Substitui o banco nos testes. `indisponivel = true` simula queda do repositório. */
 export class InMemoryProfissionalRepository implements ProfissionalRepository {
   indisponivel = false;
   atrasoMs = 0;
@@ -25,11 +25,32 @@ export class InMemoryProfissionalRepository implements ProfissionalRepository {
     return this.profissionais.filter((p) => ids.includes(p.id));
   }
 
+  async buscarPorId(id: string): Promise<Profissional | null> {
+    await this.simularInfra();
+    return this.profissionais.find((p) => p.id === id) ?? null;
+  }
+
+  async registrarAvaliacao(avaliacao: Avaliacao): Promise<void> {
+    await this.simularInfra();
+    this.profissionais = this.profissionais.map((p) => (p.id === avaliacao.profissionalId ? comAvaliacao(p, avaliacao) : p));
+  }
+
   private async simularInfra(): Promise<void> {
     this.consultas += 1;
     if (this.atrasoMs > 0) await new Promise((r) => setTimeout(r, this.atrasoMs));
     if (this.indisponivel) throw new Error('conexão recusada');
   }
+}
+
+function comAvaliacao(profissional: Profissional, avaliacao: Avaliacao): Profissional {
+  return new Profissional({
+    ...profissional,
+    especialidades: [...profissional.especialidades],
+    historicoProjetos: [...profissional.historicoProjetos],
+    disponibilidade: [...profissional.disponibilidade],
+    competencias: [...profissional.competencias],
+    avaliacoes: [...profissional.avaliacoes, avaliacao],
+  });
 }
 
 export class InMemoryProjetoRepository implements ProjetoRepository, RecomendacaoRepository, ConviteRepository {
@@ -78,7 +99,6 @@ export class InMemoryProjetoRepository implements ProjetoRepository, Recomendaca
   }
 }
 
-/** Logger que apenas acumula as linhas (evita ruído no output dos testes). */
 export class LoggerMemoria {
   readonly linhas: Array<{ objeto: Record<string, unknown>; mensagem: string }> = [];
   info(objeto: Record<string, unknown>, mensagem: string): void {

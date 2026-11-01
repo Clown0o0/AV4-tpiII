@@ -3,7 +3,6 @@ import { agendaAPartirDeHoje, criarProfissional, DIA_MS } from '../../support/fi
 import { InMemoryProfissionalRepository } from '../../support/InMemoryRepositories';
 import { criarSistemaDeTeste } from '../../support/sistema';
 
-// Só o Date é simulado; os temporizadores continuam reais.
 const SO_A_DATA = [
   'hrtime',
   'nextTick',
@@ -21,7 +20,6 @@ function dataISO(milissegundos: number): string {
   return new Date(milissegundos).toISOString();
 }
 
-// Sem relógio injetado, o sistema usa a data do sistema: o fluxo precisa funcionar em qualquer ano.
 describe.each(['2031-06-15T12:00:00.000Z', '2040-02-29T23:30:00.000Z'])('com o relógio do sistema em %s', (agora) => {
   beforeEach(() => {
     jest.useFakeTimers({ now: new Date(agora), doNotFake: [...SO_A_DATA] });

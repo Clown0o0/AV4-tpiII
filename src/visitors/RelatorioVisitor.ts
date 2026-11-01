@@ -1,6 +1,7 @@
 import type { Profissional } from '../domain/entities/Profissional';
 import type { DetalhesProjeto, PapelTecnico, Projeto } from '../domain/entities/Projeto';
 import type { MembroRecomendadoLeitura, Recomendacao, StatusMembro } from '../domain/entities/Recomendacao';
+import { formatarServicos, resumirServicos, type ResumoServicos } from './resumoDosServicos';
 import { VisitanteBase } from './VisitanteBase';
 
 export interface LinhaEquipe {
@@ -47,10 +48,10 @@ export interface Relatorio {
   equipe: LinhaEquipe[];
   papeisEmAberto: PapelTecnico[];
   financeiro: ResumoFinanceiro;
+  servicos: ResumoServicos;
   texto: string;
 }
 
-// Gera o relatório completo da equipe para o produtor (estruturado + texto legível).
 export class RelatorioVisitor extends VisitanteBase<Relatorio> {
   private recomendacao: Recomendacao | undefined;
   private readonly membros: MembroRecomendadoLeitura[] = [];
@@ -75,13 +76,15 @@ export class RelatorioVisitor extends VisitanteBase<Relatorio> {
     const equipe = this.membros.map((membro) => this.linhaDaEquipe(membro));
     const papeisEmAberto = papeisSemMembro(projeto, equipe);
     const financeiro = calcularFinanceiro(projeto.orcamentoTotal, equipe);
+    const servicos = resumirServicos({ projeto, recomendacao, membros: this.membros, profissionais: this.profissionais });
     return {
       projeto: resumirProjeto(projeto),
       recomendacao: resumirRecomendacao(recomendacao),
       equipe,
       papeisEmAberto,
       financeiro,
-      texto: formatarTexto(projeto, recomendacao, equipe, papeisEmAberto, financeiro),
+      servicos,
+      texto: [formatarTexto(projeto, recomendacao, equipe, papeisEmAberto, financeiro), ...formatarServicos(servicos)].join('\n'),
     };
   }
 

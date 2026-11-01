@@ -6,7 +6,6 @@ interface DuracoesDaPeca {
   maximaSegundos: number;
 }
 
-// A duração estimada não pode passar da duração máxima da peça (limite de veiculação).
 export class ValidadorPublicitario extends ValidacaoConsistenciaVisitor {
   private duracoes: DuracoesDaPeca | undefined;
 

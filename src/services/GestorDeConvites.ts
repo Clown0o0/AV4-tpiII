@@ -40,7 +40,6 @@ export class GestorDeConvites implements ServicoDeConvites {
     return this.convites.listarConvites(recomendacaoId);
   }
 
-  // Sem `membro`, cancela todos os convites pendentes da recomendação.
   async cancelarPendentes(recomendacaoId: string, membro?: MembroRecomendadoLeitura): Promise<void> {
     const pendentes = (await this.listar(recomendacaoId)).filter((c) => c.pendente && (!membro || conviteDoMembro(c, membro)));
     for (const convite of pendentes) {
@@ -49,7 +48,6 @@ export class GestorDeConvites implements ServicoDeConvites {
     }
   }
 
-  // A resposta muda o convite e o membro correspondente na recomendação; quem chama salva a recomendação.
   async responder(convite: Convite, recomendacao: Recomendacao, aceito: boolean): Promise<void> {
     garantirConviteDoMembroAtivo(convite, recomendacao);
     convite.responder(aceito, this.relogio());

@@ -90,7 +90,6 @@ export class Profissional implements Elemento {
     return this._avaliacoes.reduce((soma, a) => soma + a.nota, 0) / this._avaliacoes.length;
   }
 
-  // Média normalizada em 0..1; quem não tem avaliações recebe o valor informado.
   reputacao(semAvaliacoes: number): number {
     const media = this.mediaAvaliacoes();
     return media === null ? semAvaliacoes : media / Avaliacao.NOTA_MAXIMA;
@@ -117,7 +116,6 @@ function janelaCobre(janela: Disponibilidade, inicio: Date, fim: Date): boolean 
   return janela.inicio.getTime() <= inicio.getTime() && janela.fim.getTime() >= fim.getTime();
 }
 
-// Cache porque a comparação roda para cada candidato e localeCompare com acentos é lento.
 const CACHE_CHAVES_LOCALIZACAO = new Map<string, string>();
 const LIMITE_CACHE_CHAVES_LOCALIZACAO = 1000;
 

@@ -19,8 +19,6 @@ export interface NotificacaoTipo {
   criadaEm: Date;
 }
 
-// Base dos notificadores criados pelas fábricas. Só reage a eventos de projetos do próprio tipo
-// e só muda o texto de cada aviso. Notificação SIMULADA: fica em `enviadas` e no log.
 export abstract class NotificadorPorTipo implements Observador {
   abstract readonly nome: string;
   private readonly _enviadas: NotificacaoTipo[] = [];

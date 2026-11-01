@@ -1,7 +1,6 @@
 import type { EventoBase, EventoRecomendacao, NomeEvento } from '../EventTypes';
 import type { Observador } from '../RecomendacaoEventEmitter';
 
-// Subconjunto compatível com o pino (logger do Fastify).
 export interface LoggerEstruturado {
   info(objeto: Record<string, unknown>, mensagem: string): void;
 }
@@ -14,7 +13,6 @@ export interface RegistroAuditoria {
   dados: Record<string, unknown>;
 }
 
-// Registra, como log estruturado, toda ação de produtores, profissionais e do sistema.
 export class AuditoriaObservador implements Observador {
   readonly nome = 'auditoria';
   private readonly _registros: RegistroAuditoria[] = [];
@@ -43,7 +41,6 @@ export class AuditoriaObservador implements Observador {
   }
 }
 
-// Reduz entidades a identificadores para manter o log de auditoria enxuto.
 export function resumir(dados: Record<string, unknown>): Record<string, unknown> {
   const resultado: Record<string, unknown> = {};
   for (const [chave, valor] of Object.entries(dados)) resultado[chave] = resumirValor(valor);

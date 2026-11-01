@@ -14,7 +14,6 @@ import { DATA_ENTREGA, DATA_REFERENCIA, elencoCompleto } from '../support/fixtur
 import { InMemoryProfissionalRepository, InMemoryProjetoRepository, LoggerMemoria } from '../support/InMemoryRepositories';
 import { criarSistemaDeTeste } from '../support/sistema';
 
-/** Sobe o app Fastify completo com o banco substituído por repositórios em memória. */
 function montarApp() {
   const profissionais = new InMemoryProfissionalRepository(elencoCompleto());
   const projetos = new InMemoryProjetoRepository();
@@ -116,7 +115,6 @@ describe('API REST de recomendação (ponta a ponta)', () => {
     expect(projetos.recomendacoes.get(recomendacao.id)?.status).toBe('FINALIZADA');
 
     await eventos.aguardarPendentes();
-    // Profissionais notificados do interesse; produtor notificado dos aceites e da finalização.
     expect(email.enviados.filter((e) => e.assunto.startsWith('Convite para o projeto'))).toHaveLength(3);
     expect(email.enviados.filter((e) => e.para === 'produtora@filmes.dev').map((e) => e.assunto)).toEqual([
       'Equipe recomendada para "Sertão em Chamas"',
@@ -227,7 +225,7 @@ describe('API REST de recomendação (ponta a ponta)', () => {
 
   it('repositório de profissionais indisponível: responde com fallback, sem quebrar', async () => {
     const { app, profissionais } = ctx;
-    await recomendar(app); // aquece o cache
+    await recomendar(app);
     profissionais.indisponivel = true;
     const comCache = await recomendar(app);
     expect(comCache.fonteProfissionais).toBe('CACHE');

@@ -24,8 +24,6 @@ interface DadosDeRenderizacao {
   duracaoEstimadaMin: number;
 }
 
-// Relatório base + métricas de eficiência de renderização, calculadas só com dados do projeto e
-// da equipe. Com um projeto que não é animação, devolve o relatório base sem as métricas.
 export class RelatorioAnimacaoVisitor extends RelatorioVisitor {
   private animacao: DadosDeRenderizacao | undefined;
 

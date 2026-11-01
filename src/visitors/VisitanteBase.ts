@@ -7,8 +7,6 @@ import type { ProjetoPublicitario } from '../domain/entities/ProjetoPublicitario
 import type { MembroRecomendadoLeitura, Recomendacao } from '../domain/entities/Recomendacao';
 import type { ProjetoVisitor } from './ProjetoVisitor';
 
-// Visita padrão: guarda o projeto e ignora o resto; cada visitor sobrescreve só o que usa.
-// Os subtipos de projeto caem em visitarProjeto, a não ser que o visitor queira tratá-los.
 export abstract class VisitanteBase<R> implements ProjetoVisitor<R> {
   private projeto: Projeto | undefined;
 

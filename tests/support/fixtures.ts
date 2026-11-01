@@ -7,12 +7,10 @@ import { CossenoStrategy } from '../../src/strategies/CossenoStrategy';
 
 export const DATA_REFERENCIA = new Date('2026-01-10T00:00:00.000Z');
 export const DATA_ENTREGA = new Date('2026-12-15T00:00:00.000Z');
-// Mesma estratégia base que o RegistroFabricas.padrao() usa.
 export const OPCOES_FABRICA: OpcoesFabrica = { estrategiaBase: new CossenoStrategy() };
 export const JANELA_TOTAL = { inicio: new Date('2025-12-01T00:00:00.000Z'), fim: new Date('2027-06-30T00:00:00.000Z') };
 export const DIA_MS = 86_400_000;
 
-// Para testes que usam o relógio real (Date.now()): a agenda acompanha a data em que o teste roda.
 export function agendaAPartirDeHoje(dias = 365): Array<{ inicio: Date; fim: Date }> {
   return [{ inicio: new Date(Date.now() - DIA_MS), fim: new Date(Date.now() + dias * DIA_MS) }];
 }
@@ -75,7 +73,6 @@ export function criarProjeto(dados: Partial<DadosProjeto> = {}): Projeto {
   return new Projeto(dadosProjeto(dados));
 }
 
-/** Um bom candidato por papel (perfil padrão), mais uma variação mais barata e menos aderente. */
 export function elencoCompleto(): Profissional[] {
   return PAPEIS_TECNICOS.flatMap((papel, i) => [
     criarProfissional({ id: `${papel}-top`, nome: `${papel} Top`, especialidades: [papel], precoMin: 20000 + i * 1000 }),
@@ -90,7 +87,6 @@ export function elencoCompleto(): Profissional[] {
   ]);
 }
 
-/** Gera N profissionais pseudoaleatórios (determinístico) para testes de escala. */
 export function gerarProfissionais(total: number): Profissional[] {
   let estado = 7;
   const aleatorio = () => {

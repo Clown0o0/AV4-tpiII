@@ -1,7 +1,5 @@
 import { ErroValidacao } from '../errors';
 
-// Leitura dos atributos específicos de cada tipo de projeto (vêm do corpo da requisição ou do banco).
-
 export function lerTexto(valor: unknown, campo: string): string {
   if (typeof valor !== 'string' || !valor.trim()) throw new ErroValidacao(`Atributo "${campo}" deve ser um texto não vazio`);
   return valor.trim();

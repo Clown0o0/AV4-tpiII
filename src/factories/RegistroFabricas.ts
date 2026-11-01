@@ -8,7 +8,6 @@ import type { CatalogoFabricas, FabricaProjeto, OpcoesFabrica } from './FabricaP
 import { FabricaFiccao } from './ficcao/FabricaFiccao';
 import { FabricaPublicitario } from './publicitario/FabricaPublicitario';
 
-// Único lugar que liga tipo de projeto -> fábrica. Um tipo novo só precisa ser registrado aqui.
 export class RegistroFabricas implements CatalogoFabricas {
   private readonly fabricas = new Map<TipoCaptacao, FabricaProjeto>();
 
@@ -16,7 +15,6 @@ export class RegistroFabricas implements CatalogoFabricas {
     for (const fabrica of fabricas) this.registrar(fabrica);
   }
 
-  // Cosseno é a estratégia base padrão, a mesma assumida pelo Projeto quando o produtor não escolhe.
   static padrao(opcoes: Partial<OpcoesFabrica> = {}): RegistroFabricas {
     const completas: OpcoesFabrica = { estrategiaBase: new CossenoStrategy(), ...opcoes };
     return new RegistroFabricas([

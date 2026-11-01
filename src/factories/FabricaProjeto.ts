@@ -6,11 +6,8 @@ import type { ProjetoVisitor } from '../visitors/ProjetoVisitor';
 import type { Relatorio } from '../visitors/RelatorioVisitor';
 import type { ResultadoValidacao } from '../visitors/ValidacaoConsistenciaVisitor';
 
-// Abstract Factory: cada tipo de projeto tem uma fábrica que cria a família inteira (projeto,
-// validador, recomendador, notificador e relatório) do mesmo tipo. Cada criarX() é um Factory Method.
 export interface FabricaProjeto {
   readonly tipo: TipoCaptacao;
-  // A mesma fábrica, usando `base` (a estratégia escolhida pelo produtor) no recomendador.
   comEstrategia(base: RecomendacaoStrategy): FabricaProjeto;
   criarProjeto(dados: DadosProjeto): Projeto;
   criarValidador(dataReferencia?: Date): ProjetoVisitor<ResultadoValidacao>;
@@ -25,12 +22,10 @@ export interface CatalogoFabricas {
 }
 
 export interface OpcoesFabrica {
-  // Estratégia que o recomendador do tipo decora.
   estrategiaBase: RecomendacaoStrategy;
   logger?: LoggerEstruturado;
 }
 
-// O que é comum às fábricas concretas: as opções (estratégia base e logger).
 export abstract class FabricaProjetoBase implements FabricaProjeto {
   abstract readonly tipo: TipoCaptacao;
   constructor(protected readonly opcoes: OpcoesFabrica) {}

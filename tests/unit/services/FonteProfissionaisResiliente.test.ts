@@ -1,3 +1,4 @@
+import { AdaptadorInterno } from '../../../src/adaptadores/profissional/AdaptadorInterno';
 import { FonteProfissionaisResiliente } from '../../../src/services/FonteProfissionaisResiliente';
 import { criarProfissional, DATA_ENTREGA, DATA_REFERENCIA } from '../../support/fixtures';
 import { InMemoryProfissionalRepository } from '../../support/InMemoryRepositories';
@@ -12,7 +13,7 @@ describe('FonteProfissionaisResiliente', () => {
       criarProfissional({ id: 'editor', especialidades: ['EDITOR'] }),
       criarProfissional({ id: 'ocupado', disponibilidade: [{ inicio: new Date('2026-01-01'), fim: new Date('2026-01-02') }] }),
     ]);
-    const fonte = new FonteProfissionaisResiliente(repo);
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo));
 
     const todos = await fonte.buscarCandidatos(filtro);
     expect(todos).toEqual({ profissionais: expect.any(Array), fonte: 'REPOSITORIO' });
@@ -23,14 +24,14 @@ describe('FonteProfissionaisResiliente', () => {
 
   it('consulta o repositório uma vez enquanto o catálogo está válido', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
-    const fonte = new FonteProfissionaisResiliente(repo, { ttlMs: 60000 });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { ttlMs: 60000 });
     for (let i = 0; i < 5; i++) await fonte.buscarCandidatos(filtro);
     expect(repo.consultas).toBe(1);
   });
 
   it('com ttl vencido recarrega e enxerga profissionais novos', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
-    const fonte = new FonteProfissionaisResiliente(repo, { ttlMs: 0 });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { ttlMs: 0 });
     expect((await fonte.buscarCandidatos(filtro)).profissionais).toHaveLength(1);
     repo.profissionais = [...repo.profissionais, criarProfissional({ id: 'b' })];
     expect((await fonte.buscarCandidatos(filtro)).profissionais).toHaveLength(2);
@@ -39,7 +40,7 @@ describe('FonteProfissionaisResiliente', () => {
 
   it('invalidar força a recarga na próxima busca', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
-    const fonte = new FonteProfissionaisResiliente(repo, { ttlMs: 60000 });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { ttlMs: 60000 });
     fonte.invalidar();
     await fonte.buscarCandidatos(filtro);
     repo.profissionais = [];
@@ -52,7 +53,7 @@ describe('FonteProfissionaisResiliente', () => {
   it('requisições simultâneas compartilham uma única carga', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
     repo.atrasoMs = 20;
-    const fonte = new FonteProfissionaisResiliente(repo, { timeoutMs: 1000 });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { timeoutMs: 1000 });
     const resultados = await Promise.all(Array.from({ length: 100 }, () => fonte.buscarCandidatos(filtro)));
     expect(repo.consultas).toBe(1);
     expect(resultados.every((r) => r.fonte === 'REPOSITORIO' && r.profissionais.length === 1)).toBe(true);
@@ -64,7 +65,7 @@ describe('FonteProfissionaisResiliente', () => {
       criarProfissional({ id: 'caro', precoMin: 90000 }),
     ]);
     const falhas: string[] = [];
-    const fonte = new FonteProfissionaisResiliente(repo, { ttlMs: 0, aoFalhar: (_e, op) => falhas.push(op) });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { ttlMs: 0, aoFalhar: (_e, op) => falhas.push(op) });
     await fonte.buscarCandidatos(filtro);
 
     repo.indisponivel = true;
@@ -76,13 +77,13 @@ describe('FonteProfissionaisResiliente', () => {
   it('sem catálogo e com o repositório fora, devolve vazio como INDISPONIVEL', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
     repo.indisponivel = true;
-    const resultado = await new FonteProfissionaisResiliente(repo).buscarCandidatos(filtro);
+    const resultado = await new FonteProfissionaisResiliente(new AdaptadorInterno(repo)).buscarCandidatos(filtro);
     expect(resultado).toEqual({ profissionais: [], fonte: 'INDISPONIVEL', erro: 'conexão recusada' });
   });
 
   it('buscarPorIds usa o catálogo quando o repositório cai e sinaliza INDISPONIVEL sem nada carregado', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
-    const fonte = new FonteProfissionaisResiliente(repo);
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo));
     await fonte.buscarCandidatos(filtro);
     repo.indisponivel = true;
     expect((await fonte.buscarPorIds(['a', 'b'])).fonte).toBe('CACHE');
@@ -91,8 +92,9 @@ describe('FonteProfissionaisResiliente', () => {
 
   it('converte erros que não são Error em mensagem', async () => {
     const fonte = new FonteProfissionaisResiliente({
-      listarTodos: () => Promise.reject('string de erro'),
-      buscarPorIds: () => Promise.reject(42),
+      listarProfissionais: (criterios) => Promise.reject(criterios.ids ? 42 : 'string de erro'),
+      detalharProfissional: () => Promise.reject(42),
+      registrarAvaliacao: () => Promise.reject(42),
     });
     expect((await fonte.buscarCandidatos(filtro)).erro).toBe('string de erro');
     expect((await fonte.buscarPorIds(['x'])).erro).toBe('42');
@@ -101,7 +103,7 @@ describe('FonteProfissionaisResiliente', () => {
   it('timeout aciona o fallback, mas a carga lenta termina e atualiza o catálogo', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional()]);
     repo.atrasoMs = 60;
-    const fonte = new FonteProfissionaisResiliente(repo, { timeoutMs: 10 });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { timeoutMs: 10 });
     const resultado = await fonte.buscarCandidatos(filtro);
     expect(resultado.fonte).toBe('INDISPONIVEL');
     expect(resultado.erro).toMatch(/excedeu 10ms/);
@@ -116,7 +118,7 @@ describe('FonteProfissionaisResiliente', () => {
     try {
       const repo = new InMemoryProfissionalRepository([criarProfissional({ id: 'a' })]);
       const falhas: string[] = [];
-      const fonte = new FonteProfissionaisResiliente(repo, { ttlMs: 2000, aoFalhar: (_e, op) => falhas.push(op) });
+      const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { ttlMs: 2000, aoFalhar: (_e, op) => falhas.push(op) });
       await fonte.iniciar();
       expect(repo.consultas).toBe(1);
 
@@ -138,9 +140,23 @@ describe('FonteProfissionaisResiliente', () => {
 
   it('com ttl 0 não agenda atualização periódica', async () => {
     const repo = new InMemoryProfissionalRepository([criarProfissional()]);
-    const fonte = new FonteProfissionaisResiliente(repo, { ttlMs: 0 });
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(repo), { ttlMs: 0 });
     await fonte.iniciar();
     expect(repo.consultas).toBe(1);
     fonte.parar();
+  });
+
+  it('trocarOrigem descarta a carga em andamento da origem antiga e passa a ler da nova', async () => {
+    const antiga = new InMemoryProfissionalRepository([criarProfissional({ id: 'antigo', especialidades: ['EDITOR'] })]);
+    antiga.atrasoMs = 30;
+    const nova = new InMemoryProfissionalRepository([criarProfissional({ id: 'novo', especialidades: ['EDITOR'] })]);
+    const fonte = new FonteProfissionaisResiliente(new AdaptadorInterno(antiga), { ttlMs: 60000, timeoutMs: 500 });
+    const cargaAntiga = fonte.atualizar();
+    fonte.trocarOrigem(new AdaptadorInterno(nova));
+    await cargaAntiga;
+    const { profissionais, fonte: origem } = await fonte.buscarCandidatos({ ...filtro, papeis: ['EDITOR'] });
+    expect(origem).toBe('REPOSITORIO');
+    expect(profissionais.map((p) => p.id)).toEqual(['novo']);
+    expect(nova.consultas).toBe(1);
   });
 });

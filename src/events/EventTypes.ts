@@ -19,7 +19,6 @@ export const EVENTOS = {
 
 export type NomeEvento = (typeof EVENTOS)[keyof typeof EVENTOS];
 
-// Quem executou a ação (para auditoria).
 export interface Ator {
   tipo: 'PRODUTOR' | 'PROFISSIONAL' | 'SISTEMA';
   id: string;
@@ -29,8 +28,6 @@ export interface EventoBase {
   ator: Ator;
   ocorridoEm: Date;
   projetoId: string;
-  // Preenchido pelo SistemaRecomendacao; deixa os notificadores por tipo filtrarem
-  // eventos que não carregam o projeto (ex.: MEMBRO_REJEITADO).
   tipoCaptacao?: TipoCaptacao;
 }
 
@@ -38,9 +35,7 @@ export interface RecomendacaoGerada extends EventoBase {
   projeto: Projeto;
   recomendacao: Recomendacao;
   motivo: 'INICIAL' | 'REAVALIACAO';
-  // Profissionais sugeridos nesta recomendação (recebem aviso de interesse do produtor).
   profissionaisSugeridos: readonly Profissional[];
-  // Origem dos profissionais: repositório, cache de fallback ou indisponível.
   fonteProfissionais: OrigemDosProfissionais;
 }
 
@@ -102,7 +97,6 @@ export interface MapaEventos {
   [EVENTOS.INTEGRACAO_FINANCEIRO]: IniciarFinanceiro;
 }
 
-// Evento entregue aos observadores: o nome discrimina o tipo do payload.
 export interface EventoDe<E extends NomeEvento> {
   readonly nome: E;
   readonly payload: MapaEventos[E];

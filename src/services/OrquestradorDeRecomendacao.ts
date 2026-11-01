@@ -58,7 +58,6 @@ const AVISO_POR_ORIGEM: Readonly<Record<OrigemDosProfissionais, ((erro?: string)
   INDISPONIVEL: (erro) => `Repositório de profissionais indisponível (${erro}); nenhuma sugestão pôde ser gerada`,
 };
 
-// Monta a equipe (ou o substituto de um papel) com o orquestrador da fábrica do tipo do projeto.
 export class OrquestradorDeRecomendacao implements RecomendadorDeEquipes {
   constructor(private readonly deps: DependenciasOrquestradorDeRecomendacao) {}
 
@@ -78,7 +77,6 @@ export class OrquestradorDeRecomendacao implements RecomendadorDeEquipes {
     return { recomendacao, fonte: busca.fonte, sugeridos: profissionaisSugeridos(recomendacao, busca) };
   }
 
-  // Nova rodada só para o papel: os outros membros ficam fixos e o custo deles sai do orçamento.
   async recomendarSubstituto(
     projeto: Projeto,
     recomendacao: Recomendacao,
@@ -115,8 +113,6 @@ export class OrquestradorDeRecomendacao implements RecomendadorDeEquipes {
     }));
   }
 
-  // Orquestra com o catálogo em memória e confere no repositório se os escolhidos ainda existem;
-  // se algum foi removido, recarrega o catálogo e orquestra de novo, uma única vez.
   private async orquestrarConfirmando(
     filtro: FiltroCandidatos,
     montarEntrada: (profissionais: Profissional[]) => EntradaOrquestracao,

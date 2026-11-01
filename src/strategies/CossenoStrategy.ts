@@ -8,7 +8,6 @@ import {
   type RecomendacaoStrategy,
 } from './RecomendacaoStrategy';
 
-// Ranqueia pela similaridade de cosseno entre o perfil desejado do papel e o vetor de competências.
 export class CossenoStrategy implements RecomendacaoStrategy {
   readonly tipo = 'COSSENO' as const;
   readonly descricao = 'Similaridade de cosseno entre o perfil desejado do papel e o vetor de competências do profissional';

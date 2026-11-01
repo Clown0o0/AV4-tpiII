@@ -39,4 +39,19 @@ describe('criarSistemaRecomendacao (raiz de composição)', () => {
     expect(criarOrquestrador).toHaveBeenCalled();
     expect(recomendacao.criadaEm).toBe(DATA_REFERENCIA);
   });
+
+  it('escolhe os adaptadores pelo nome do provedor', async () => {
+    const sistema = criarSistemaRecomendacao({
+      ...infraestrutura(),
+      relogio: () => DATA_REFERENCIA,
+      provedores: { armazenamento: 'google', pagamento: 'paypal', profissionais: 'indeed' },
+    });
+    const { recomendacao, projeto } = await sistema.recomendar(dadosProjeto());
+    const { convite } = await sistema.aceitarMembro(recomendacao.id, 'DIRETOR');
+    await sistema.responderConvite(convite.id, true);
+    expect((await sistema.pagarMembro(recomendacao.id, 'DIRETOR')).pagamentoId.startsWith('PAYID-')).toBe(true);
+    await sistema.anexarArquivo(projeto.id, { nome: 'a.txt', categoria: 'ROTEIRO', conteudo: Buffer.from('a') });
+    expect(await sistema.listarArquivos(projeto.id)).toHaveLength(1);
+    expect((await sistema.detalharProfissional('EDITOR-top')).id).toBe('EDITOR-top');
+  });
 });

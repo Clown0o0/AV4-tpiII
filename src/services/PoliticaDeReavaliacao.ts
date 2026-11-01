@@ -17,7 +17,6 @@ export interface CriterioDeReavaliacao {
   deveReavaliar(alteracao: ResultadoAlteracao, forcar: boolean): boolean;
 }
 
-// Uma alteração é significativa quando muda a estratégia ou passa de um dos limiares.
 export class PoliticaDeReavaliacao implements CriterioDeReavaliacao {
   constructor(private readonly limiares: LimiaresReavaliacao) {}
 

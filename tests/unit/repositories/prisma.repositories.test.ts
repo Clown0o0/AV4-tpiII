@@ -1,15 +1,17 @@
+import { Avaliacao } from '../../../src/domain/entities/Avaliacao';
 import type { PrismaClient } from '@prisma/client';
 import { Convite } from '../../../src/domain/entities/Convite';
 import { MembroRecomendado, Recomendacao } from '../../../src/domain/entities/Recomendacao';
 import { PrismaProfissionalRepository } from '../../../src/repositories/PrismaProfissionalRepository';
 import { RegistroFabricas } from '../../../src/factories/RegistroFabricas';
 import { PrismaProjetoRepository } from '../../../src/repositories/PrismaProjetoRepository';
-import { criarProjeto, DATA_ENTREGA, DATA_REFERENCIA } from '../../support/fixtures';
+import { Projeto } from '../../../src/domain/entities/Projeto';
+import { criarProjeto, dadosProjeto, DATA_ENTREGA, DATA_REFERENCIA } from '../../support/fixtures';
 
-/** PrismaClient falso: apenas os delegates usados pelos repositórios. */
 function prismaFalso() {
   const mock = {
-    profissional: { findMany: jest.fn() },
+    profissional: { findMany: jest.fn(), findUnique: jest.fn() },
+    avaliacao: { create: jest.fn() },
     projeto: { upsert: jest.fn(), findUnique: jest.fn() },
     projetoPapel: { deleteMany: jest.fn(), createMany: jest.fn() },
     recomendacao: { upsert: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn() },
@@ -76,6 +78,28 @@ describe('PrismaProfissionalRepository', () => {
     await repo.buscarPorIds(['a', 'b']);
     expect(mock.profissional.findMany.mock.calls[0][0].where).toEqual({ id: { in: ['a', 'b'] } });
   });
+
+  it('busca por id só consulta ids no formato uuid', async () => {
+    const { mock, prisma } = prismaFalso();
+    const id = '11111111-2222-4333-8444-555555555555';
+    mock.profissional.findUnique.mockResolvedValueOnce({ ...registroProfissional, id }).mockResolvedValueOnce(null);
+    const repo = new PrismaProfissionalRepository(prisma);
+
+    expect(await repo.buscarPorId('nao-e-uuid')).toBeNull();
+    expect(mock.profissional.findUnique).not.toHaveBeenCalled();
+    expect((await repo.buscarPorId(id))?.nome).toBe('Ana');
+    expect(await repo.buscarPorId(id)).toBeNull();
+    expect(mock.profissional.findUnique.mock.calls[0][0].where).toEqual({ id });
+  });
+
+  it('registra a avaliação com todos os campos', async () => {
+    const { mock, prisma } = prismaFalso();
+    const avaliacao = new Avaliacao({ profissionalId: 'p1', autorId: 'prod', nota: 5, comentario: 'ok', criadaEm: DATA_REFERENCIA });
+    await new PrismaProfissionalRepository(prisma).registrarAvaliacao(avaliacao);
+    expect(mock.avaliacao.create).toHaveBeenCalledWith({
+      data: { id: avaliacao.id, profissionalId: 'p1', autorId: 'prod', projetoId: null, nota: 5, comentario: 'ok', criadaEm: DATA_REFERENCIA },
+    });
+  });
 });
 
 describe('PrismaProjetoRepository', () => {
@@ -113,6 +137,33 @@ describe('PrismaProjetoRepository', () => {
 
     mock.projeto.findUnique.mockResolvedValueOnce(null);
     expect(await repo.buscarPorId('x')).toBeNull();
+  });
+
+  it('projeto gravado antes da ATVIII (sem servicoPrincipal) é carregado a partir de ProjetoPapel', async () => {
+    const { mock, prisma } = prismaFalso();
+    const repo = new PrismaProjetoRepository(prisma, RegistroFabricas.padrao());
+    const projeto = criarProjeto();
+    await repo.salvar(projeto);
+    mock.projeto.findUnique.mockResolvedValueOnce({
+      ...mock.projeto.upsert.mock.calls[0][0].create,
+      servicoPrincipal: null,
+      orcamentoTotal: '200000.00',
+      papeis: [{ projetoId: projeto.id, papel: 'ROTEIRISTA', peso: 2, competenciasDesejadas: null }],
+    });
+    const lido = await repo.buscarPorId(projeto.id);
+    expect(lido?.papeis).toEqual([{ papel: 'ROTEIRISTA', peso: 2 }]);
+    expect(lido?.calcularCustoTotal()).toBe(0);
+  });
+
+  it('recusa gravar atributos específicos que não são JSON', async () => {
+    const { prisma } = prismaFalso();
+    const repo = new PrismaProjetoRepository(prisma, RegistroFabricas.padrao());
+    class ProjetoComDetalheInvalido extends Projeto {
+      override get detalhes(): Record<string, unknown> {
+        return { lista: [1, 'a', true, null, { ok: 1 }], quando: () => 1 };
+      }
+    }
+    await expect(repo.salvar(new ProjetoComDetalheInvalido(dadosProjeto()))).rejects.toThrow(TypeError);
   });
 
   it('salva e reconstrói a recomendação com seus membros', async () => {

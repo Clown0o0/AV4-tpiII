@@ -20,7 +20,6 @@ export interface GeracaoDeRelatorio {
 
 export type CriadorDeVisitorDeCompatibilidade = () => ProjetoVisitor<ResultadoCompatibilidade>;
 
-// Roda sobre a equipe atual o relatório e o validador da fábrica do tipo e a compatibilidade.
 export class GeradorDeRelatorio implements GeracaoDeRelatorio {
   constructor(
     private readonly profissionais: FonteDeProfissionais,

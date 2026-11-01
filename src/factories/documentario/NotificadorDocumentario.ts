@@ -29,8 +29,6 @@ interface DadosAvisoDocumentario {
   tema: string;
 }
 
-// Lê os dados dos avisos pelo despacho duplo. Um projeto do tipo sem a subclasse (registro
-// antigo) cai em visitarProjeto e recebe os valores neutros.
 class LeitorDocumentario extends VisitanteBase<DadosAvisoDocumentario> {
   private dados: DadosAvisoDocumentario = { entrevistados: 0, tema: '' };
 

@@ -17,7 +17,6 @@ function prismaFalso() {
   return { mock, prisma: mock as unknown as PrismaClient };
 }
 
-// O que o banco devolveria para o projeto gravado pelo upsert.
 function lidoDoBanco(mock: ReturnType<typeof prismaFalso>['mock'], projeto: Projeto) {
   return { ...mock.projeto.upsert.mock.calls[0][0].create, orcamentoTotal: String(projeto.orcamentoTotal), papeis: [{ papel: 'DIRETOR', peso: 1, competenciasDesejadas: null }] };
 }

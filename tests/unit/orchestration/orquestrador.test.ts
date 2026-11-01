@@ -18,7 +18,6 @@ import {
   elencoCompleto,
   gerarProfissionais, OPCOES_FABRICA } from '../../support/fixtures';
 
-/** Subclasse instrumentada: cada etapa registra sua execução e pode ter comportamento próprio. */
 class OrquestradorInstrumentado extends OrquestradorEquipe {
   readonly etapas: string[] = [];
 
@@ -82,7 +81,6 @@ describe('Template Method — fluxo principal imutável', () => {
     const fluxo = ['validar', 'normalizar', 'aplicar', 'posProcessar'];
     expect(a.etapas).toEqual(fluxo);
     expect(b.etapas).toEqual(fluxo);
-    // As etapas variaram (resultados diferentes), o esqueleto não.
     expect(resultadoA.avisos).toEqual(['variante A']);
     expect(resultadoB.avisos).toEqual(['variante B']);
     expect(resultadoA.orcamentoDisponivel).not.toBe(resultadoB.orcamentoDisponivel);
@@ -133,7 +131,6 @@ describe('OrquestradorPadrao', () => {
   });
 
   it('reserva orçamento para os papéis seguintes, preferindo alternativa mais barata quando necessário', () => {
-    // Orçamento curto: o diretor "top" (20000) + fotógrafo mais barato (6500) + editor mais barato (7500) = 34000 > 30000.
     const resultado = orquestrador.orquestrar(entrada({ projeto: criarProjeto({ orcamentoTotal: 30000 }) }));
     expect(resultado.papeisSemCandidato).toEqual([]);
     expect(resultado.custoTotal).toBeLessThanOrEqual(30000);

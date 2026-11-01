@@ -15,9 +15,7 @@ export interface CompatibilidadePapel {
 }
 
 export interface ResultadoCompatibilidade {
-  // Média ponderada pelos pesos dos papéis; papéis vazios contam como 0.
   indiceGeral: number;
-  // Fração dos papéis requeridos com membro ativo.
   cobertura: number;
   porPapel: CompatibilidadePapel[];
 }
@@ -26,11 +24,9 @@ export interface PesosCompatibilidade {
   competencias: number;
   reputacao: number;
   localizacao: number;
-  // Reputação (0..1) assumida para profissionais sem avaliações.
   reputacaoSemAvaliacao: number;
 }
 
-// Pesos padrão da fórmula; podem ser trocados no construtor.
 export const PESOS_COMPATIBILIDADE: PesosCompatibilidade = {
   competencias: 0.6,
   reputacao: 0.25,
@@ -38,7 +34,6 @@ export const PESOS_COMPATIBILIDADE: PesosCompatibilidade = {
   reputacaoSemAvaliacao: 0.5,
 };
 
-// Calcula uma métrica de compatibilidade geral da equipe com o projeto.
 export class CompatibilidadeEquipeVisitor extends VisitanteBase<ResultadoCompatibilidade> {
   private readonly membrosPorProfissional = new Map<string, MembroRecomendadoLeitura>();
   private readonly porPapel: CompatibilidadePapel[] = [];

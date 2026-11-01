@@ -177,7 +177,6 @@ describe('SistemaRecomendacao', () => {
     expect(recomendacao.membros.find((m) => m.profissionalId === 'DIRETOR-top')?.status).toBe('SUBSTITUIDO');
     expect(await nomes()).toContain(EVENTOS.MEMBRO_SUBSTITUIDO);
 
-    // Nova substituição: todos os diretores já foram sugeridos -> papel fica em aberto.
     const segunda = await service.substituirMembro(recomendacao.id, 'DIRETOR', 'ORCAMENTO_REDUZIDO');
     expect(segunda.novoMembro).toBeNull();
     expect(recomendacao.parcial).toBe(true);
@@ -238,7 +237,6 @@ describe('SistemaRecomendacao', () => {
     const { recomendacao } = await service.recomendar(dadosProjeto());
     const { convite } = await service.aceitarMembro(recomendacao.id, 'DIRETOR');
     await service.substituirMembro(recomendacao.id, 'DIRETOR');
-    // força um convite "pendente" antigo para simular corrida entre substituição e resposta
     const antigo = projetos.convites.get(convite.id)!;
     Object.assign(antigo, { _status: 'PENDENTE' });
     await expect(service.responderConvite(convite.id, true)).rejects.toThrow(/não corresponde mais/);
@@ -300,7 +298,6 @@ describe('SistemaRecomendacao', () => {
         limiares: { variacaoOrcamento: 0.01 },
       });
       const { projeto } = await service.recomendar(dadosProjeto());
-      // 2,5% não é significativo pelo padrão (10%), mas é com o limite configurado em 1%.
       expect((await service.alterarProjeto(projeto.id, { orcamentoTotal: 205000 })).reavaliada).toBe(true);
     });
 

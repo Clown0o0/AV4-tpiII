@@ -79,7 +79,6 @@ export class RecomendacaoEventEmitter implements Publicador, PublicadorEventos {
     try {
       this.tratadorFalha(erro, evento, observador);
     } catch {
-      // um tratador com defeito não pode derrubar os outros observadores
     }
   }
 }

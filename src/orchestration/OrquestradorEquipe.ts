@@ -3,7 +3,6 @@ import type { PapelTecnico, Projeto, TipoEstrategia } from '../domain/entities/P
 import type { VetorCompetencias } from '../domain/entities/Competencia';
 import type { CandidatoPontuado, RecomendacaoStrategy } from '../strategies/RecomendacaoStrategy';
 
-// Membro já definido que deve permanecer fixo durante a rodada (ex.: numa substituição).
 export interface MembroFixo {
   papel: PapelTecnico;
   profissionalId: string;
@@ -18,19 +17,15 @@ export interface EntradaOrquestracao {
   projeto: Projeto;
   profissionais: readonly Profissional[];
   estrategia: RecomendacaoStrategy;
-  // Início da janela de trabalho (normalmente "agora").
   dataReferencia: Date;
-  // Papéis a (re)compor. Padrão: todos os papéis do projeto.
   papeisAlvo?: readonly PapelTecnico[];
   membrosFixos?: readonly MembroFixo[];
-  // Profissionais que não podem ser sugeridos para um papel (ex.: já rejeitados).
   excluidosPorPapel?: ReadonlyMap<PapelTecnico, ReadonlySet<string>>;
 }
 
 export interface PapelNormalizado {
   papel: PapelTecnico;
   pesoOriginal: number;
-  // Peso normalizado entre os papéis alvo (somam 1).
   peso: number;
   perfilDesejado: VetorCompetencias;
   orcamentoPapel: number;
@@ -69,8 +64,6 @@ export interface ResultadoOrquestracao {
   avisos: string[];
 }
 
-// Template Method: o fluxo é fixo e as subclasses só implementam as etapas. TypeScript não tem
-// `final`, por isso a sobrescrita de orquestrar() é barrada em tempo de execução.
 export abstract class OrquestradorEquipe {
   protected constructor() {
     this.impedirSobrescritaDoFluxo(new.target.name);

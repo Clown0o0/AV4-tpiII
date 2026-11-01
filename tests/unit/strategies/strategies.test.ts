@@ -11,12 +11,6 @@ import { similaridadeCosseno } from '../../../src/domain/entities/Competencia';
 import { arredondar, type ContextoEstrategia } from '../../../src/strategies/RecomendacaoStrategy';
 import { criarProfissional, criarProjeto, DATA_REFERENCIA, gerarProfissionais, OPCOES_FABRICA } from '../../support/fixtures';
 
-/**
- * Cenário em que cada estratégia tem um "vencedor" diferente para DIRETOR:
- * - especialista: perfil idêntico ao desejado, caro, de outra cidade, mal avaliado pelo vizinho do produtor;
- * - bemAvaliado: competências fracas, mas avaliado com nota máxima por um produtor de gosto parecido;
- * - localBarato: aderência média, barato e na mesma cidade do projeto.
- */
 function cenario(): { projeto: Projeto; universo: Profissional[] } {
   const projeto = criarProjeto({ orcamentoTotal: 50000, localizacao: 'São Paulo', papeis: [{ papel: 'DIRETOR', peso: 1 }] });
   const especialista = criarProfissional({
@@ -39,7 +33,6 @@ function cenario(): { projeto: Projeto; universo: Profissional[] } {
     localizacao: 'são paulo',
     competencias: { direcao: 0.5, roteiro: 0.8 },
   });
-  // Editor avaliado igualmente pelos dois produtores: torna produtor-1 e produtor-2 "vizinhos".
   const editorComum = criarProfissional({
     id: 'editor-comum',
     especialidades: ['EDITOR'],
@@ -134,13 +127,11 @@ describe('FiltragemColaborativaStrategy', () => {
   });
 
   it('ignora vizinhos com gosto oposto e cai na média bayesiana', () => {
-    // produtor-1 e produtor-3 discordam sobre o editor -> similaridade negativa.
     const editor = criarProfissional({ id: 'ed', especialidades: ['EDITOR'], notas: [['produtor-1', 5], ['produtor-3', 1]] });
     const diretor = criarProfissional({ id: 'dir', notas: [['produtor-3', 5]] });
     const projeto = criarProjeto({ papeis: [{ papel: 'DIRETOR', peso: 1 }] });
     const [c] = new FiltragemColaborativaStrategy().recomendar([diretor], contexto(projeto, [editor, diretor]));
     expect(c?.detalhes.pesoVizinhos).toBe(0);
-    // média global = (5+1+5)/3 = 3.667; bayesiana = (2*3.667 + 5) / 3
     expect(c?.detalhes.notaPrevista).toBeCloseTo((2 * (11 / 3) + 5) / 3, 3);
   });
 
@@ -161,13 +152,11 @@ describe('FiltragemColaborativaStrategy', () => {
   });
 
   it('pondera a nota de cada vizinho pela similaridade com o produtor', () => {
-    // produtor-2 concorda em tudo com produtor-1 (similaridade 1); produtor-3 só em parte.
     const e1 = criarProfissional({ id: 'e1', especialidades: ['EDITOR'], notas: [['produtor-1', 5], ['produtor-2', 5], ['produtor-3', 5]] });
     const e2 = criarProfissional({ id: 'e2', especialidades: ['EDITOR'], notas: [['produtor-1', 4], ['produtor-3', 1]] });
     const alvo = criarProfissional({ id: 'alvo', notas: [['produtor-2', 5], ['produtor-3', 1]] });
     const projeto = criarProjeto({ papeis: [{ papel: 'DIRETOR', peso: 1 }] });
     const [c] = new FiltragemColaborativaStrategy().recomendar([alvo], contexto(projeto, [e1, e2, alvo]));
-    // Notas centralizadas em comum com produtor-3: (2, 1) e (2, -2).
     const s3 = 2 / (Math.sqrt(5) * Math.sqrt(8));
     expect(c?.detalhes.pesoVizinhos).toBeCloseTo(1 + s3, 4);
     expect(c?.detalhes.notaPrevista).toBeCloseTo((1 * 5 + s3 * 1) / (1 + s3), 4);
@@ -192,7 +181,6 @@ describe('FiltragemColaborativaStrategy', () => {
   });
 });
 
-// Cálculo direto da filtragem colaborativa: para cada candidato percorre os vizinhos em ordem.
 function previsoesDeReferencia(universo: readonly Profissional[], produtor: string): (p: Profissional) => { nota: number; peso: number } {
   const notas = new Map<string, Map<string, number>>();
   let somaGeral = 0;

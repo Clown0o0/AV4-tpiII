@@ -1,6 +1,5 @@
 import type { Config } from 'jest';
 
-// Sintaxe CommonJS de propósito: o Node 24 carrega este arquivo com "type stripping" nativo.
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',

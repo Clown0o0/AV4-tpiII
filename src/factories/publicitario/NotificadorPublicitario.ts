@@ -26,8 +26,6 @@ interface DadosAvisoPublicitario {
   canais: readonly string[];
 }
 
-// Lê os dados dos avisos pelo despacho duplo. Um projeto do tipo sem a subclasse (registro
-// antigo) cai em visitarProjeto e recebe os valores neutros.
 class LeitorPublicitario extends VisitanteBase<DadosAvisoPublicitario> {
   private dados: DadosAvisoPublicitario = { marca: '', canais: [] };
 

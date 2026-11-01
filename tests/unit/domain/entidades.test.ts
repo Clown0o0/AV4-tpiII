@@ -3,7 +3,7 @@ import { Competencia, similaridadeCosseno } from '../../../src/domain/entities/C
 import { Convite } from '../../../src/domain/entities/Convite';
 import { Profissional } from '../../../src/domain/entities/Profissional';
 import { Projeto } from '../../../src/domain/entities/Projeto';
-import { MembroRecomendado, Recomendacao } from '../../../src/domain/entities/Recomendacao';
+import { MembroRecomendado, Recomendacao, type MembroRecomendadoLeitura } from '../../../src/domain/entities/Recomendacao';
 import { ErroEstadoInvalido, ErroValidacao } from '../../../src/domain/errors';
 import { criarProfissional, dadosProjeto, DATA_ENTREGA } from '../../support/fixtures';
 
@@ -132,8 +132,8 @@ describe('Recomendacao e Convite — transições de estado', () => {
   it('quem recebe um membro pela recomendação só lê; o status muda pelos métodos da recomendação', () => {
     const r = recomendacao();
     const membro = r.membroAtivo('EDITOR');
-    // @ts-expect-error transicionar não faz parte de MembroRecomendadoLeitura
-    void membro?.transicionar;
+    const leituraExpoeTransicionar: 'transicionar' extends keyof MembroRecomendadoLeitura ? true : false = false;
+    expect(leituraExpoeTransicionar).toBe(false);
     expect(membro?.status).toBe('SUGERIDO');
     expect(r.membros).not.toBe(r.membros);
     r.convidar('EDITOR');

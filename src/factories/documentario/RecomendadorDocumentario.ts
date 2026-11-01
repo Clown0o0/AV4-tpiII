@@ -1,6 +1,5 @@
 import { RecomendadorPorTipo } from '../../strategies/RecomendadorPorTipo';
 
-// Competências valorizadas: documentário depende de pesquisa, narrativa e som direto.
 export const COMPETENCIAS_DOCUMENTARIO = ['pesquisa', 'narrativa', 'captacao_som'] as const;
 
 export class RecomendadorDocumentario extends RecomendadorPorTipo {

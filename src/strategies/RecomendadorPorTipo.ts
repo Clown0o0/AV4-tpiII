@@ -8,12 +8,8 @@ import {
   type RecomendacaoStrategy,
 } from './RecomendacaoStrategy';
 
-// Peso da afinidade: o score final é 80% o da estratégia base e 20% a afinidade com o tipo.
 export const PESO_AFINIDADE_TIPO = 0.2;
 
-// Decorator da estratégia escolhida pelo produtor: mantém as regras dela (inclusive os descartes)
-// e ajusta o score pelas competências que o tipo de projeto valoriza. `tipo` e `descricao` são
-// os da base, então a API e Recomendacao.estrategia continuam mostrando a estratégia escolhida.
 export abstract class RecomendadorPorTipo implements RecomendacaoStrategy {
   protected abstract readonly competenciasValorizadas: readonly string[];
 
@@ -40,7 +36,6 @@ export abstract class RecomendadorPorTipo implements RecomendacaoStrategy {
     );
   }
 
-  // Média dos níveis (0..1) do profissional nas competências valorizadas pelo tipo.
   private afinidade(profissional: Profissional): number {
     const vetor = profissional.vetorCompetencias();
     const soma = this.competenciasValorizadas.reduce((total, nome) => total + (vetor[nome] ?? 0), 0);

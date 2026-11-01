@@ -1,6 +1,3 @@
-// Modelo de persistência do microsserviço cinebridge-recomendacao.
-// Apenas src/repositories/ conhece este schema (via @prisma/client).
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -66,8 +63,8 @@ model Projeto {
   tipoCaptacao       TipoCaptacao
   localizacao        String
   estrategia         TipoEstrategia @default(COSSENO)
-  // Atributos específicos do tipo (documentário, animação, publicitário); null na ficção.
   detalhes           Json?
+  servicoPrincipal   Json?
   criadoEm          DateTime       @default(now())
   papeis             ProjetoPapel[]
   recomendacoes      Recomendacao[]
@@ -76,7 +73,6 @@ model Projeto {
   @@index([produtorId])
 }
 
-// Papel técnico obrigatório do projeto, com peso de importância relativa.
 model ProjetoPapel {
   projetoId             String       @db.Uuid
   papel                 PapelTecnico
@@ -157,7 +153,6 @@ model Recomendacao {
   @@index([projetoId, status])
 }
 
-// Membro sugerido de uma recomendação (inclui histórico de rejeições/substituições).
 model MembroRecomendado {
   id             String       @id @default(uuid()) @db.Uuid
   recomendacaoId String       @db.Uuid

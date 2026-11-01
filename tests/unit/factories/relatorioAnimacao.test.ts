@@ -42,7 +42,6 @@ describe('RelatorioAnimacaoVisitor', () => {
     const base = estrutura.aceitar(new RelatorioVisitor());
     const animacao = estrutura.aceitar(new RelatorioAnimacaoVisitor());
 
-    // 10 min * 60 s * 30 qps = 18000 quadros; custo 18000 / 18000 quadros = 1.00 por quadro
     expect(animacao).toMatchObject({
       ...base,
       texto: expect.stringContaining(base.texto),

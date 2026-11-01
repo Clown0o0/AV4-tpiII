@@ -10,14 +10,29 @@ import { RegistroPrototipos, type CatalogoPrototipos } from '../prototypes/Regis
 import type { CriadorDeOrquestrador, Relogio } from '../services/contratos';
 import { FonteProfissionaisResiliente, type OpcoesFonteResiliente } from '../services/FonteProfissionaisResiliente';
 import { GeradorDeRelatorio } from '../services/GeradorDeRelatorio';
+import { GestorDeArquivos } from '../services/GestorDeArquivos';
+import { GestorDeAvaliacoes } from '../services/GestorDeAvaliacoes';
+import { GestorDePagamentos } from '../services/GestorDePagamentos';
 import { GestorDeConvites } from '../services/GestorDeConvites';
 import { OrquestradorDeRecomendacao } from '../services/OrquestradorDeRecomendacao';
 import { LIMIARES_PADRAO, PoliticaDeReavaliacao, type LimiaresReavaliacao } from '../services/PoliticaDeReavaliacao';
 import { PublicadorDeEventosDeRecomendacao } from '../services/PublicadorDeEventosDeRecomendacao';
 import { SistemaRecomendacao } from '../services/SistemaRecomendacao';
+import type { OpcoesCache } from '../strategies/decoradores/CacheDecorator';
+import { PoliticaDeDecoradores } from '../strategies/decoradores/PoliticaDeDecoradores';
+import type { RegistroDeAuditoria } from '../strategies/decoradores/RegistroDeAuditoria';
+import { RegistroDeAuditoriaEmMemoria } from '../strategies/decoradores/RegistroDeAuditoriaEmMemoria';
 import type { CatalogoEstrategias } from '../strategies/RecomendacaoStrategy';
 import { RegistroEstrategias } from '../strategies/RegistroEstrategias';
 import { CompatibilidadeEquipeVisitor } from '../visitors/CompatibilidadeEquipeVisitor';
+import { PROVEDORES_PADRAO, type ProvedoresConfigurados } from './configuracao';
+import { decorarFabricas, type OpcoesDosDecoradores } from './decoradores';
+import {
+  criarAdaptadorArmazenamento,
+  criarAdaptadorPagamento,
+  criarAdaptadorProfissional,
+  type AdaptadoresDoSistema,
+} from './provedores';
 
 export type RepositorioDeProjetos = ProjetoRepository & RecomendacaoRepository & ConviteRepository;
 
@@ -32,12 +47,22 @@ export interface OpcoesSistemaRecomendacao {
   relogio?: Relogio;
   limiares?: Partial<LimiaresReavaliacao>;
   opcoesFonte?: Partial<OpcoesFonteResiliente>;
+  provedores?: Partial<ProvedoresConfigurados>;
+  adaptadores?: Partial<AdaptadoresDoSistema>;
+  politicaDeDecoradores?: PoliticaDeDecoradores;
+  registroDeAuditoria?: RegistroDeAuditoria;
+  opcoesCache?: Partial<OpcoesCache>;
 }
 
-type OpcoesCompletas = Required<Omit<OpcoesSistemaRecomendacao, 'limiares' | 'opcoesFonte'>> &
-  Pick<OpcoesSistemaRecomendacao, 'opcoesFonte'> & { limiares: LimiaresReavaliacao };
+type OpcoesOpcionais = 'limiares' | 'opcoesFonte' | 'provedores' | 'adaptadores' | 'politicaDeDecoradores' | 'registroDeAuditoria' | 'opcoesCache';
 
-// Raiz de composição: único lugar que escolhe as implementações concretas e os valores padrão.
+type OpcoesCompletas = Required<Omit<OpcoesSistemaRecomendacao, OpcoesOpcionais>> &
+  Pick<OpcoesSistemaRecomendacao, 'opcoesFonte'> & {
+    limiares: LimiaresReavaliacao;
+    adaptadores: AdaptadoresDoSistema;
+    decoradores: OpcoesDosDecoradores;
+  };
+
 export function criarSistemaRecomendacao(opcoes: OpcoesSistemaRecomendacao): SistemaRecomendacao {
   return montarSistema(completarComPadroes(opcoes));
 }
@@ -51,12 +76,27 @@ function completarComPadroes(opcoes: OpcoesSistemaRecomendacao): OpcoesCompletas
     criarOrquestrador: opcoes.criarOrquestrador ?? ((fabrica) => new OrquestradorPadrao(fabrica)),
     relogio: opcoes.relogio ?? ((): Date => new Date()),
     limiares: { ...LIMIARES_PADRAO, ...opcoes.limiares },
+    adaptadores: completarAdaptadores(opcoes),
+    decoradores: {
+      politica: opcoes.politicaDeDecoradores ?? new PoliticaDeDecoradores(),
+      registroDeAuditoria: opcoes.registroDeAuditoria ?? new RegistroDeAuditoriaEmMemoria(),
+      ...(opcoes.opcoesCache ? { opcoesCache: opcoes.opcoesCache } : {}),
+    },
+  };
+}
+
+function completarAdaptadores(opcoes: OpcoesSistemaRecomendacao): AdaptadoresDoSistema {
+  const provedores = { ...PROVEDORES_PADRAO, ...opcoes.provedores };
+  return {
+    armazenamento: opcoes.adaptadores?.armazenamento ?? criarAdaptadorArmazenamento(provedores.armazenamento),
+    pagamento: opcoes.adaptadores?.pagamento ?? criarAdaptadorPagamento(provedores.pagamento),
+    profissional: opcoes.adaptadores?.profissional ?? criarAdaptadorProfissional(provedores.profissionais, opcoes.profissionais),
   };
 }
 
 function montarSistema(opcoes: OpcoesCompletas): SistemaRecomendacao {
-  const { projetos, fabricas, estrategias, criarOrquestrador, relogio } = opcoes;
-  const profissionais = new FonteProfissionaisResiliente(opcoes.profissionais, opcoes.opcoesFonte);
+  const { projetos, fabricas, estrategias, criarOrquestrador, relogio, adaptadores } = opcoes;
+  const profissionais = new FonteProfissionaisResiliente(adaptadores.profissional, opcoes.opcoesFonte);
   return new SistemaRecomendacao({
     projetos,
     recomendacoes: projetos,
@@ -65,11 +105,23 @@ function montarSistema(opcoes: OpcoesCompletas): SistemaRecomendacao {
     fabricas,
     estrategias,
     prototipos: opcoes.prototipos,
-    recomendador: new OrquestradorDeRecomendacao({ fabricas, estrategias, profissionais, criarOrquestrador, relogio }),
+    recomendador: new OrquestradorDeRecomendacao({
+      fabricas: decorarFabricas(fabricas, opcoes.decoradores),
+      estrategias,
+      profissionais,
+      criarOrquestrador,
+      relogio,
+    }),
     convites: new GestorDeConvites(projetos, relogio),
     relatorios: new GeradorDeRelatorio(profissionais, () => new CompatibilidadeEquipeVisitor(), relogio),
     eventos: new PublicadorDeEventosDeRecomendacao(opcoes.eventos, relogio),
     reavaliacao: new PoliticaDeReavaliacao(opcoes.limiares),
+    arquivos: new GestorDeArquivos(),
+    pagamentos: new GestorDePagamentos(profissionais),
+    avaliacoes: new GestorDeAvaliacoes(profissionais),
+    adaptadorArmazenamento: adaptadores.armazenamento,
+    adaptadorPagamento: adaptadores.pagamento,
+    adaptadorProfissional: adaptadores.profissional,
     relogio,
   });
 }

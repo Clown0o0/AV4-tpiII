@@ -28,7 +28,6 @@ export interface DadosMembro {
   alternativas?: Alternativa[];
 }
 
-// O que quem está fora da Recomendacao enxerga de um membro: só leitura, sem transicionar().
 export interface MembroRecomendadoLeitura {
   readonly id: string;
   readonly papel: PapelTecnico;
@@ -41,7 +40,6 @@ export interface MembroRecomendadoLeitura {
   readonly ativo: boolean;
 }
 
-// Construído pelo domínio e pela orquestração; o status só muda pelos métodos da Recomendacao.
 export class MembroRecomendado implements Elemento, MembroRecomendadoLeitura {
   readonly id: string;
   readonly papel: PapelTecnico;
@@ -96,7 +94,6 @@ export interface DadosRecomendacao {
   finalizadaEm?: Date | null;
 }
 
-// Equipe recomendada para um projeto, incluindo o histórico de rodadas por papel.
 export class Recomendacao implements Elemento {
   readonly id: string;
   readonly projetoId: string;
@@ -153,7 +150,6 @@ export class Recomendacao implements Elemento {
     return this.membrosAtivos().reduce((soma, m) => soma + m.custo, 0);
   }
 
-  // Profissionais já sugeridos para o papel em qualquer rodada.
   profissionaisJaSugeridos(papel: PapelTecnico): Set<string> {
     return new Set(this._membros.filter((m) => m.papel === papel).map((m) => m.profissionalId));
   }
@@ -201,7 +197,6 @@ export class Recomendacao implements Elemento {
     return this.transicionar(papel, ['CONVIDADO'], 'RECUSADO');
   }
 
-  // Consenso: todos os papéis exigidos possuem um membro confirmado pelo profissional.
   equipeConsensual(papeisExigidos: readonly PapelTecnico[]): boolean {
     return papeisExigidos.every((papel) => this.membroAtivo(papel)?.status === 'CONFIRMADO');
   }
@@ -240,3 +235,5 @@ export class Recomendacao implements Elemento {
     }
   }
 }
+
+export type Equipe = Recomendacao;

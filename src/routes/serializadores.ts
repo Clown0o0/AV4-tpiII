@@ -1,4 +1,8 @@
+import { servicoParaJson, type ServicoJson } from '../servicos-projeto/ServicoJson';
+import type { ArquivoComConteudo, ArquivoDoProjeto } from '../services/GestorDeArquivos';
 import type { Convite, StatusConvite } from '../domain/entities/Convite';
+import type { VetorCompetencias } from '../domain/entities/Competencia';
+import type { Profissional } from '../domain/entities/Profissional';
 import type {
   DetalhesProjeto,
   PapelRequerido,
@@ -28,6 +32,9 @@ export interface ProjetoJson {
   localizacao: string;
   estrategia: TipoEstrategia;
   papeis: readonly PapelRequerido[];
+  servicoPrincipal: ServicoJson;
+  custoTotal: number;
+  prazoTotalDias: number;
   detalhes: DetalhesProjeto | null;
 }
 
@@ -68,6 +75,56 @@ export interface ConviteJson {
   respondidoEm: string | null;
 }
 
+export interface ArquivoJson {
+  arquivoId: string;
+  projetoId: string;
+  nome: string;
+  categoria: string;
+}
+
+export interface ArquivoComConteudoJson extends ArquivoJson {
+  tamanhoBytes: number;
+  conteudoBase64: string;
+}
+
+export interface ProfissionalJson {
+  id: string;
+  nome: string;
+  especialidades: readonly PapelTecnico[];
+  precoMin: number;
+  precoMax: number;
+  localizacao: string;
+  competencias: VetorCompetencias;
+  historicoProjetos: readonly string[];
+  disponibilidade: Array<{ inicio: string; fim: string }>;
+  mediaAvaliacoes: number | null;
+  totalAvaliacoes: number;
+}
+
+export function arquivoJson(arquivo: ArquivoDoProjeto): ArquivoJson {
+  return { arquivoId: arquivo.arquivoId, projetoId: arquivo.projetoId, nome: arquivo.nome, categoria: arquivo.categoria };
+}
+
+export function arquivoComConteudoJson(arquivo: ArquivoComConteudo): ArquivoComConteudoJson {
+  return { ...arquivoJson(arquivo), tamanhoBytes: arquivo.conteudo.byteLength, conteudoBase64: arquivo.conteudo.toString('base64') };
+}
+
+export function profissionalJson(profissional: Profissional): ProfissionalJson {
+  return {
+    id: profissional.id,
+    nome: profissional.nome,
+    especialidades: [...profissional.especialidades],
+    precoMin: profissional.precoMin,
+    precoMax: profissional.precoMax,
+    localizacao: profissional.localizacao,
+    competencias: { ...profissional.vetorCompetencias() },
+    historicoProjetos: [...profissional.historicoProjetos],
+    disponibilidade: profissional.disponibilidade.map((j) => ({ inicio: j.inicio.toISOString(), fim: j.fim.toISOString() })),
+    mediaAvaliacoes: profissional.mediaAvaliacoes(),
+    totalAvaliacoes: profissional.avaliacoes.length,
+  };
+}
+
 export function projetoJson(projeto: Projeto): ProjetoJson {
   return {
     id: projeto.id,
@@ -82,6 +139,9 @@ export function projetoJson(projeto: Projeto): ProjetoJson {
     localizacao: projeto.localizacao,
     estrategia: projeto.estrategia,
     papeis: projeto.papeis,
+    servicoPrincipal: servicoParaJson(projeto.servicoPrincipal),
+    custoTotal: projeto.calcularCustoTotal(),
+    prazoTotalDias: projeto.calcularPrazoTotalDias(),
     detalhes: projeto.detalhes,
   };
 }

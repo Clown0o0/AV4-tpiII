@@ -26,8 +26,6 @@ interface DadosAvisoAnimacao {
   softwares: readonly string[];
 }
 
-// Lê os dados dos avisos pelo despacho duplo. Um projeto do tipo sem a subclasse (registro
-// antigo) cai em visitarProjeto e recebe os valores neutros.
 class LeitorAnimacao extends VisitanteBase<DadosAvisoAnimacao> {
   private dados: DadosAvisoAnimacao = { tecnica: '', softwares: [] };
 

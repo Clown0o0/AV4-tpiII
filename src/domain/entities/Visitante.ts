@@ -5,7 +5,6 @@ import type { ProjetoPublicitario } from './ProjetoPublicitario';
 import type { Profissional } from './Profissional';
 import type { MembroRecomendadoLeitura, Recomendacao } from './Recomendacao';
 
-// Um método por elemento concreto: cada subtipo de projeto chama o seu em aceitar() (despacho duplo).
 export interface Visitante {
   visitarProjeto(projeto: Projeto): void;
   visitarProjetoDocumentario(projeto: ProjetoDocumentario): void;
@@ -16,6 +15,6 @@ export interface Visitante {
   visitarProfissional(profissional: Profissional): void;
 }
 
-export interface Elemento {
-  aceitar(visitante: Visitante): void;
+export interface Elemento<V = Visitante> {
+  aceitar(visitante: V): void;
 }

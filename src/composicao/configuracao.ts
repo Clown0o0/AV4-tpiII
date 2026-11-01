@@ -1,12 +1,31 @@
 import { TIMEOUT_PADRAO_MS, TTL_CATALOGO_PADRAO_MS } from '../services/FonteProfissionaisResiliente';
+import { NOMES_DECORADORES, PILHA_PADRAO_DE_DECORADORES, type NomeDecorador } from '../strategies/decoradores/nomesDosDecoradores';
 
 export const NIVEIS_DE_LOG = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 export type NivelDeLog = (typeof NIVEIS_DE_LOG)[number];
 
 export const PORTA_PADRAO = 3000;
 export const HOST_PADRAO = '0.0.0.0';
-// Maior atraso aceito por setTimeout/setInterval; acima disso o Node dispara imediatamente.
 export const MAIOR_INTERVALO_MS = 2_147_483_647;
+
+export const PROVEDORES_ARMAZENAMENTO = ['local', 's3', 'google'] as const;
+export type ProvedorArmazenamento = (typeof PROVEDORES_ARMAZENAMENTO)[number];
+export const PROVEDORES_PAGAMENTO = ['stripe', 'pagseguro', 'paypal'] as const;
+export type ProvedorPagamento = (typeof PROVEDORES_PAGAMENTO)[number];
+export const PROVEDORES_PROFISSIONAIS = ['interno', 'linkedin', 'indeed'] as const;
+export type ProvedorProfissionais = (typeof PROVEDORES_PROFISSIONAIS)[number];
+
+export interface ProvedoresConfigurados {
+  armazenamento: ProvedorArmazenamento;
+  pagamento: ProvedorPagamento;
+  profissionais: ProvedorProfissionais;
+}
+
+export const PROVEDORES_PADRAO: Readonly<ProvedoresConfigurados> = {
+  armazenamento: 'local',
+  pagamento: 'stripe',
+  profissionais: 'interno',
+};
 
 export interface Configuracao {
   databaseUrl: string;
@@ -15,6 +34,9 @@ export interface Configuracao {
   nivelLog: NivelDeLog;
   catalogoTtlMs: number;
   profissionaisTimeoutMs: number;
+  provedores: ProvedoresConfigurados;
+  decoradores: readonly NomeDecorador[];
+  decoradoresPorProdutor: ReadonlyMap<string, readonly NomeDecorador[]>;
 }
 
 export type Ambiente = Readonly<Record<string, string | undefined>>;
@@ -26,8 +48,6 @@ export class ErroConfiguracao extends Error {
   }
 }
 
-// Lê as variáveis acumulando todos os problemas, para a mensagem listar tudo de uma vez.
-// Variável vazia conta como ausente (ex.: "PORT=" no .env).
 export class LeitorDeAmbiente {
   private readonly problemas: string[] = [];
 
@@ -54,7 +74,6 @@ export class LeitorDeAmbiente {
     return this.valor(nome) ?? padrao;
   }
 
-  // O valor da URL nunca entra na mensagem: ela contém a senha do banco.
   urlDoBanco(nome: string): string {
     const bruto = this.valor(nome);
     if (bruto === undefined) {
@@ -63,6 +82,24 @@ export class LeitorDeAmbiente {
       this.problemas.push(`${nome} é inválida: use o formato postgresql://USUARIO:SENHA@HOST:PORTA/BANCO?schema=public`);
     }
     return bruto ?? '';
+  }
+
+  listaDeOpcoes<T extends string>(nome: string, opcoes: readonly T[], padrao: readonly T[]): readonly T[] {
+    const bruto = this.ambiente[nome]?.trim();
+    if (bruto === undefined) return padrao;
+    const lista = lerListaDeOpcoes(bruto === '' ? [] : bruto.split(',').map((item) => item.trim()), opcoes);
+    if (lista) return lista;
+    this.problemas.push(`${nome}="${bruto}" é inválida: ${descricaoDaLista(opcoes)}, separados por vírgula (vazio = nenhum)`);
+    return padrao;
+  }
+
+  mapaDeListasDeOpcoes<T extends string>(nome: string, opcoes: readonly T[]): ReadonlyMap<string, readonly T[]> {
+    const bruto = this.valor(nome);
+    if (bruto === undefined) return new Map();
+    const mapa = lerMapaDeListas(bruto, opcoes);
+    if (mapa) return mapa;
+    this.problemas.push(`${nome} é inválida: use um JSON como {"produtor-1":["cache","compressao"]}; ${descricaoDaLista(opcoes)}`);
+    return new Map();
   }
 
   confirmar(): void {
@@ -75,7 +112,6 @@ export class LeitorDeAmbiente {
   }
 }
 
-// Único ponto de leitura das variáveis de ambiente do servidor.
 export function lerConfiguracao(ambiente: Ambiente): Configuracao {
   const leitor = new LeitorDeAmbiente(ambiente);
   const configuracao: Configuracao = {
@@ -85,12 +121,52 @@ export function lerConfiguracao(ambiente: Ambiente): Configuracao {
     nivelLog: leitor.opcao('LOG_LEVEL', NIVEIS_DE_LOG, 'info'),
     catalogoTtlMs: leitor.inteiro('CATALOGO_TTL_MS', TTL_CATALOGO_PADRAO_MS, 0, MAIOR_INTERVALO_MS),
     profissionaisTimeoutMs: leitor.inteiro('PROFISSIONAIS_TIMEOUT_MS', TIMEOUT_PADRAO_MS, 1, MAIOR_INTERVALO_MS),
+    provedores: lerProvedores(leitor),
+    decoradores: leitor.listaDeOpcoes('DECORADORES', NOMES_DECORADORES, PILHA_PADRAO_DE_DECORADORES),
+    decoradoresPorProdutor: leitor.mapaDeListasDeOpcoes('DECORADORES_POR_PRODUTOR', NOMES_DECORADORES),
   };
   leitor.confirmar();
   return configuracao;
 }
 
-// Configuração inválida encerra com a mensagem em português e código 1, sem stack.
+function lerProvedores(leitor: LeitorDeAmbiente): ProvedoresConfigurados {
+  return {
+    armazenamento: leitor.opcao('ARMAZENAMENTO', PROVEDORES_ARMAZENAMENTO, PROVEDORES_PADRAO.armazenamento),
+    pagamento: leitor.opcao('PAGAMENTO', PROVEDORES_PAGAMENTO, PROVEDORES_PADRAO.pagamento),
+    profissionais: leitor.opcao('PROFISSIONAIS', PROVEDORES_PROFISSIONAIS, PROVEDORES_PADRAO.profissionais),
+  };
+}
+
+function descricaoDaLista(opcoes: readonly string[]): string {
+  return `use nomes sem repetição dentre: ${opcoes.join(', ')}`;
+}
+
+function lerListaDeOpcoes<T extends string>(itens: readonly unknown[], opcoes: readonly T[]): T[] | null {
+  const lista = itens.flatMap((item) => opcoes.filter((opcao) => opcao === item));
+  return lista.length === itens.length && new Set(lista).size === lista.length ? lista : null;
+}
+
+function lerMapaDeListas<T extends string>(bruto: string, opcoes: readonly T[]): Map<string, T[]> | null {
+  const dados = lerJson(bruto);
+  if (typeof dados !== 'object' || dados === null || Array.isArray(dados)) return null;
+  const entradas: Array<[string, unknown]> = Object.entries(dados);
+  const mapa = new Map<string, T[]>();
+  for (const [produtorId, valor] of entradas) {
+    const lista = Array.isArray(valor) && produtorId.trim() !== '' ? lerListaDeOpcoes(valor, opcoes) : null;
+    if (!lista) return null;
+    mapa.set(produtorId, lista);
+  }
+  return mapa;
+}
+
+function lerJson(texto: string): unknown {
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return undefined;
+  }
+}
+
 export function lerOuEncerrar<T>(ler: () => T, sair: (mensagem: string) => never = sairComErro): T {
   try {
     return ler();

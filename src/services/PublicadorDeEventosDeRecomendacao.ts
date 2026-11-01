@@ -34,7 +34,6 @@ export interface DadosDaSubstituicao {
 
 const SISTEMA: Ator = { tipo: 'SISTEMA', id: 'cinebridge-recomendacao' };
 
-// Monta o EventoBase (ator, horário, projeto e tipo) de cada evento de domínio e de integração.
 export class PublicadorDeEventosDeRecomendacao implements EventosDeRecomendacao {
   constructor(
     private readonly eventos: PublicadorEventos,
@@ -94,7 +93,6 @@ export class PublicadorDeEventosDeRecomendacao implements EventosDeRecomendacao 
     this.iniciarFinanceiro(projeto, recomendacao);
   }
 
-  // Os eventos de integração só são emitidos em memória; nenhum outro serviço é chamado de verdade.
   private iniciarGerenciamentoDoProjeto(projeto: Projeto, recomendacao: Recomendacao): void {
     this.eventos.publicar(EVENTOS.INTEGRACAO_GERENCIAMENTO_PROJETOS, {
       ...this.base(projeto, SISTEMA),

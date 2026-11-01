@@ -5,7 +5,6 @@ import type { Visitante } from './Visitante';
 export const TECNICAS_ANIMACAO = ['2D', '3D', 'STOP_MOTION'] as const;
 export type TecnicaAnimacao = (typeof TECNICAS_ANIMACAO)[number];
 
-// Valores padrão dos atributos da animação.
 export const TECNICA_PADRAO: TecnicaAnimacao = '2D';
 export const QUADROS_POR_SEGUNDO_PADRAO = 24;
 

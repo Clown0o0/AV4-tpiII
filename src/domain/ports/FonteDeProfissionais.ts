@@ -1,12 +1,11 @@
+import type { AdaptadorProfissional } from '../../adaptadores/profissional/AdaptadorProfissional';
 import type { PapelTecnico } from '../entities/Projeto';
 import type { Profissional } from '../entities/Profissional';
 
 export type OrigemDosProfissionais = 'REPOSITORIO' | 'CACHE' | 'INDISPONIVEL';
 
 export interface FiltroCandidatos {
-  // Profissionais que atuam em pelo menos um destes papéis.
   papeis: readonly PapelTecnico[];
-  // Janela que o profissional precisa ter disponível por inteiro.
   disponivelDe: Date;
   disponivelAte: Date;
   precoMinMaximo?: number;
@@ -27,4 +26,5 @@ export interface FonteDeProfissionais {
 export interface CicloDeVidaDoCatalogo {
   iniciar(): Promise<void>;
   parar(): void;
+  trocarOrigem(adaptador: AdaptadorProfissional): void;
 }

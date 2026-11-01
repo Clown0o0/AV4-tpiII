@@ -12,11 +12,15 @@ describe('schemas das rotas', () => {
     expect(schema).toMatchObject({
       required: ['titulo', 'produtorId', 'orcamentoTotal', 'dataEntrega', 'localizacao'],
       if: { required: ['modelo'] },
-      else: { required: ['genero', 'duracaoEstimadaMin', 'tipoCaptacao', 'papeis'] },
+      else: {
+        required: ['genero', 'duracaoEstimadaMin', 'tipoCaptacao'],
+        anyOf: [{ required: ['papeis'] }, { required: ['servicoPrincipal'] }],
+      },
       properties: {
         tipoCaptacao: { type: 'string', enum: ['FICCAO'] },
         estrategia: { type: 'string', enum: ['COSSENO'] },
         papeis: { type: 'array', minItems: 1, items: { required: ['papel', 'peso'] } },
+        servicoPrincipal: { type: 'object', required: ['tipo', 'nome'], properties: { tipo: { enum: ['ATOMICO', 'PACOTE'] } } },
       },
     });
   });

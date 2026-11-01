@@ -9,7 +9,6 @@ export type DetalhesDocumentario = {
 
 export class ProjetoDocumentario extends Projeto {
   readonly entrevistados: readonly string[];
-  // Sem tema informado, o tema é o gênero.
   private readonly temaInformado: string | undefined;
 
   constructor(dados: DadosProjeto) {

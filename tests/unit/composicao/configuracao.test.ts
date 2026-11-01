@@ -27,6 +27,9 @@ describe('lerConfiguracao', () => {
       nivelLog: 'info',
       catalogoTtlMs: 60000,
       profissionaisTimeoutMs: 1500,
+      provedores: { armazenamento: 'local', pagamento: 'stripe', profissionais: 'interno' },
+      decoradores: ['cache', 'auditoria'],
+      decoradoresPorProdutor: new Map(),
     });
   });
 
@@ -74,6 +77,51 @@ describe('lerConfiguracao', () => {
     expect(erro.problemas).toHaveLength(3);
     expect(erro.message.split('\n')[0]).toBe('Configuração inválida:');
   });
+});
+
+describe('provedores e decoradores', () => {
+  const ler = (ambiente: Record<string, string>) => lerConfiguracao({ DATABASE_URL: URL_VALIDA, ...ambiente });
+
+  it('lê os provedores de cada adaptador', () => {
+    expect(ler({ ARMAZENAMENTO: 's3', PAGAMENTO: 'paypal', PROFISSIONAIS: 'linkedin' }).provedores).toEqual({
+      armazenamento: 's3',
+      pagamento: 'paypal',
+      profissionais: 'linkedin',
+    });
+  });
+
+  it.each([
+    ['ARMAZENAMENTO', 'dropbox', /ARMAZENAMENTO="dropbox" é inválida: use um destes valores: local, s3, google/],
+    ['PAGAMENTO', 'pix', /PAGAMENTO="pix" é inválida: use um destes valores: stripe, pagseguro, paypal/],
+    ['PROFISSIONAIS', 'glassdoor', /PROFISSIONAIS="glassdoor" é inválida: use um destes valores: interno, linkedin, indeed/],
+  ])('%s="%s" é recusado', (nome, valor, mensagem) => {
+    expect(() => ler({ [nome]: valor })).toThrow(mensagem);
+  });
+
+  it('DECORADORES é uma lista ordenada; vazio significa nenhum decorador', () => {
+    expect(ler({ DECORADORES: ' compressao , cache ' }).decoradores).toEqual(['compressao', 'cache']);
+    expect(ler({ DECORADORES: '' }).decoradores).toEqual([]);
+    expect(ler({ DECORADORES: '   ' }).decoradores).toEqual([]);
+    expect(ler({}).decoradores).toEqual(['cache', 'auditoria']);
+  });
+
+  it.each(['cache,zip', 'cache,cache', 'cache,,auditoria'])('DECORADORES="%s" é recusado com mensagem clara', (valor) => {
+    expect(() => ler({ DECORADORES: valor })).toThrow(
+      `DECORADORES="${valor}" é inválida: use nomes sem repetição dentre: cache, auditoria, compressao, separados por vírgula (vazio = nenhum)`,
+    );
+  });
+
+  it('DECORADORES_POR_PRODUTOR lê um JSON de listas por produtor', () => {
+    const configuracao = ler({ DECORADORES_POR_PRODUTOR: '{"produtor-1":["cache","compressao"],"produtor-2":[]}' });
+    expect(configuracao.decoradoresPorProdutor).toEqual(new Map([['produtor-1', ['cache', 'compressao']], ['produtor-2', []]]));
+  });
+
+  it.each(['{x', '[]', '"cache"', 'null', '{"p":"cache"}', '{"p":["zip"]}', '{"p":["cache","cache"]}', '{" ":["cache"]}', '{"p":[1]}'])(
+    'DECORADORES_POR_PRODUTOR=%s é recusado',
+    (valor) => {
+      expect(() => ler({ DECORADORES_POR_PRODUTOR: valor })).toThrow(/DECORADORES_POR_PRODUTOR é inválida: use um JSON como/);
+    },
+  );
 });
 
 describe('LeitorDeAmbiente', () => {

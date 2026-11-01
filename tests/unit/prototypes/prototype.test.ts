@@ -40,7 +40,6 @@ function publicitario() {
   );
 }
 
-// Muta (à força) tudo o que é array/objeto do projeto, para provar que não há referência compartilhada.
 function mutarTudo(projeto: Projeto, campoLista: string): void {
   (projeto.papeis as Mutavel<typeof projeto.papeis>).push({ papel: 'EDITOR', peso: 9 });
   (projeto.papeis[0]!.competenciasDesejadas as Record<string, number>).direcao = 0.1;
@@ -68,10 +67,8 @@ describe('Prototype — clonar() faz cópia profunda de cada subtipo', () => {
     expect(clone.orcamentoTotal).toBe(original.orcamentoTotal);
     expect(clone.dataEntrega).toEqual(original.dataEntrega);
 
-    // clone -> original
     mutarTudo(clone, campoLista ?? 'papeis');
     expect(JSON.stringify({ ...original, detalhes: original.detalhes, dataEntrega: original.dataEntrega })).toBe(antes);
-    // original -> clone
     const outroClone = original.clonar();
     const antesClone = JSON.stringify({ ...outroClone, detalhes: outroClone.detalhes });
     mutarTudo(original, campoLista ?? 'papeis');
@@ -127,7 +124,7 @@ describe('RegistroPrototipos', () => {
     const registro = new RegistroPrototipos();
     const modelo = animacao();
     registro.registrar('anim-3d', modelo);
-    (modelo.softwares as string[]).push('mudado depois'); // não afeta o modelo guardado
+    (modelo.softwares as string[]).push('mudado depois');
 
     const a = registro.criarAPartirDe('anim-3d', { titulo: 'Curta A', dataEntrega: DATA_ENTREGA });
     const b = registro.criarAPartirDe('anim-3d', { titulo: 'Curta B', detalhes: { quadrosPorSegundo: 12 } });
@@ -158,8 +155,6 @@ describe('RegistroPrototipos', () => {
     expect(papeis('publicitario')).toEqual(['DIRETOR', 'DIRETOR_FOTOGRAFIA', 'EDITOR']);
   });
 
-  // Regressão: o modelo publicitário tinha 1 min (60 s) de duração e máximo de 30 s, então todo
-  // projeto criado a partir dele saía com o relatório inválido.
   it('cada modelo padrão passa no validador do próprio tipo (fora os papéis ainda sem membro)', () => {
     const registro = RegistroPrototipos.padrao();
     const fabricas = RegistroFabricas.padrao();
