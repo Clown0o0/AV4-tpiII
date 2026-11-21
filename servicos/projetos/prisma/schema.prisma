@@ -1,0 +1,63 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../generated/projetos"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PapelTecnico {
+  DIRETOR
+  DIRETOR_FOTOGRAFIA
+  SONOPLASTA
+  EDITOR
+  ROTEIRISTA
+  EFEITOS_VISUAIS
+}
+
+enum TipoCaptacao {
+  DOCUMENTARIO
+  FICCAO
+  ANIMACAO
+  PUBLICITARIO
+}
+
+enum TipoEstrategia {
+  COSSENO
+  FILTRAGEM_COLABORATIVA
+  ORCAMENTO_REDUZIDO
+}
+
+model Projeto {
+  id                 String         @id @default(uuid()) @db.Uuid
+  titulo             String
+  produtorId         String
+  produtorEmail      String?
+  genero             String
+  duracaoEstimadaMin Int
+  orcamentoTotal     Decimal        @db.Decimal(14, 2)
+  dataEntrega        DateTime
+  tipoCaptacao       TipoCaptacao
+  localizacao        String
+  estrategia         TipoEstrategia @default(COSSENO)
+  detalhes           Json?
+  servicoPrincipal   Json?
+  criadoEm           DateTime       @default(now())
+  finalizadoEm       DateTime?
+  papeis             ProjetoPapel[]
+
+  @@index([produtorId])
+}
+
+model ProjetoPapel {
+  projetoId             String       @db.Uuid
+  papel                 PapelTecnico
+  peso                  Float
+  competenciasDesejadas Json?
+  projeto               Projeto      @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+
+  @@id([projetoId, papel])
+}

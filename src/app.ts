@@ -11,11 +11,14 @@ import { arquivosRoutes } from './routes/arquivos.routes';
 import { pagamentosRoutes } from './routes/pagamentos.routes';
 import { profissionaisRoutes } from './routes/profissionais.routes';
 import { recomendacaoRoutes } from './routes/recomendacao.routes';
+import { registrarRotaDeSaude } from './saude/rotaDeSaude';
+import type { FonteDeSaude } from './saude/VerificadorDeSaude';
 import type { SistemaRecomendacao } from './services/SistemaRecomendacao';
 
 export interface OpcoesApp {
   logger?: FastifyServerOptions['logger'];
   montarServico: (loggerDoFastify: FastifyBaseLogger) => SistemaRecomendacao;
+  saude?: FonteDeSaude;
 }
 
 const STATUS_REQUISICAO_INVALIDA = 400;
@@ -26,7 +29,7 @@ export function construirApp(opcoes: OpcoesApp): FastifyInstance {
   app.setErrorHandler<FastifyError>(tratarErro);
   app.setNotFoundHandler(rotaInexistente);
   app.addHook('preValidation', rejeitarCaractereNulo);
-  app.get('/health', async () => ({ status: 'ok' }));
+  registrarRotaDeSaude(app, opcoes.saude);
   app.register(recomendacaoRoutes, { service });
   app.register(arquivosRoutes, { service });
   app.register(pagamentosRoutes, { service });

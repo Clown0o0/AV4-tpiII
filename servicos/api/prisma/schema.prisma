@@ -1,0 +1,93 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../generated/api"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PapelTecnico {
+  DIRETOR
+  DIRETOR_FOTOGRAFIA
+  SONOPLASTA
+  EDITOR
+  ROTEIRISTA
+  EFEITOS_VISUAIS
+}
+
+enum TipoEstrategia {
+  COSSENO
+  FILTRAGEM_COLABORATIVA
+  ORCAMENTO_REDUZIDO
+}
+
+enum StatusRecomendacao {
+  EM_ANDAMENTO
+  FINALIZADA
+  OBSOLETA
+}
+
+enum StatusMembro {
+  SUGERIDO
+  CONVIDADO
+  CONFIRMADO
+  REJEITADO
+  RECUSADO
+  SUBSTITUIDO
+}
+
+enum StatusConvite {
+  PENDENTE
+  ACEITO
+  RECUSADO
+  CANCELADO
+}
+
+model Recomendacao {
+  id           String              @id @default(uuid()) @db.Uuid
+  projetoId    String              @db.Uuid
+  estrategia   TipoEstrategia
+  status       StatusRecomendacao  @default(EM_ANDAMENTO)
+  parcial      Boolean             @default(false)
+  avisos       String[]
+  rodadas      Int                 @default(1)
+  criadaEm     DateTime            @default(now())
+  finalizadaEm DateTime?
+  membros      MembroRecomendado[]
+  convites     Convite[]
+
+  @@index([projetoId, status])
+}
+
+model MembroRecomendado {
+  id             String       @id @default(uuid()) @db.Uuid
+  recomendacaoId String       @db.Uuid
+  papel          PapelTecnico
+  profissionalId String       @db.Uuid
+  score          Float
+  custo          Decimal      @db.Decimal(12, 2)
+  status         StatusMembro
+  rodada         Int
+  alternativas   Json
+  recomendacao   Recomendacao @relation(fields: [recomendacaoId], references: [id], onDelete: Cascade)
+
+  @@index([recomendacaoId])
+}
+
+model Convite {
+  id             String        @id @default(uuid()) @db.Uuid
+  recomendacaoId String        @db.Uuid
+  projetoId      String        @db.Uuid
+  profissionalId String        @db.Uuid
+  papel          PapelTecnico
+  status         StatusConvite @default(PENDENTE)
+  criadoEm       DateTime      @default(now())
+  respondidoEm   DateTime?
+  recomendacao   Recomendacao  @relation(fields: [recomendacaoId], references: [id], onDelete: Cascade)
+
+  @@index([recomendacaoId])
+  @@index([profissionalId])
+}

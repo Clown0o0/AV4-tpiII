@@ -1,6 +1,6 @@
 // submarino
 import { randomUUID } from 'node:crypto';
-import { Prisma, PrismaClient, type PapelTecnico } from '@prisma/client';
+import { Prisma, PrismaClient, type PapelTecnico } from '../generated/profissionais';
 import { LeitorDeAmbiente, lerOuEncerrar, type Ambiente } from '../src/composicao/configuracao';
 import { PAPEIS_TECNICOS, PERFIL_PADRAO_POR_PAPEL } from '../src/domain/entities/Projeto';
 
@@ -33,17 +33,16 @@ function aleatorio(): number {
   t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
-const escolher = <T>(lista: readonly T[]): T => lista[Math.floor(aleatorio() * lista.length)] as T;
+function escolher<T>(lista: readonly T[]): T {
+  const item = lista[Math.floor(aleatorio() * lista.length)];
+  if (item === undefined) throw new RangeError('Lista vazia no seed');
+  return item;
+}
 const arred = (v: number, casas = 2) => Math.round(v * 10 ** casas) / 10 ** casas;
 
 async function main(): Promise<void> {
-  console.log(`Limpando dados e gerando ${TOTAL} profissionais...`);
+  process.stdout.write(`Limpando dados e gerando ${TOTAL} profissionais...\n`);
   await prisma.$transaction([
-    prisma.convite.deleteMany(),
-    prisma.membroRecomendado.deleteMany(),
-    prisma.recomendacao.deleteMany(),
-    prisma.projetoPapel.deleteMany(),
-    prisma.projeto.deleteMany(),
     prisma.avaliacao.deleteMany(),
     prisma.competencia.deleteMany(),
     prisma.disponibilidade.deleteMany(),
@@ -102,9 +101,9 @@ async function main(): Promise<void> {
     await prisma.competencia.createMany({ data: competencias });
     await prisma.disponibilidade.createMany({ data: disponibilidades });
     await prisma.avaliacao.createMany({ data: avaliacoes });
-    console.log(`  ${Math.min(inicio + LOTE, TOTAL)}/${TOTAL}`);
+    process.stdout.write(`  ${Math.min(inicio + LOTE, TOTAL)}/${TOTAL}\n`);
   }
-  console.log('Seed concluído. Produtores com histórico de avaliações: produtor-1 ... produtor-25');
+  process.stdout.write('Seed concluído. Produtores com histórico de avaliações: produtor-1 ... produtor-25\n');
 }
 
 main()

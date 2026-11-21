@@ -18,7 +18,26 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx prisma generate
+      - run: npm run prisma:gerar
       - run: npx tsc --noEmit
       - run: npm run build
       - run: npm test
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm run preparar
+      - run: docker compose up -d --build --wait --wait-timeout 300
+      - run: |
+          for porta in 3000 3001 3002 3003; do
+            curl -fsS "http://localhost:$porta/health"
+            echo
+          done
+      - if: failure()
+        run: docker compose logs --no-color --tail 100
+      - if: always()
+        run: docker compose down -v

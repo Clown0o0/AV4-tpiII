@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '../../generated/profissionais';
 import { Avaliacao } from '../domain/entities/Avaliacao';
 import { Competencia } from '../domain/entities/Competencia';
 import { Profissional } from '../domain/entities/Profissional';

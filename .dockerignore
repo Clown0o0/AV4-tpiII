@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+generated
+.git
+.github
+.env
+**/.env
+exemplos/gerados
+docs

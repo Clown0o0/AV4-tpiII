@@ -84,6 +84,12 @@ export class LeitorDeAmbiente {
     return bruto ?? '';
   }
 
+  urlDoRabbitMq(nome: string, padrao: string): string {
+    const bruto = this.valor(nome) ?? padrao;
+    if (!/^amqps?:\/\//.test(bruto)) this.problemas.push(`${nome} é inválida: use o formato amqp://USUARIO:SENHA@HOST:5672`);
+    return bruto;
+  }
+
   listaDeOpcoes<T extends string>(nome: string, opcoes: readonly T[], padrao: readonly T[]): readonly T[] {
     const bruto = this.ambiente[nome]?.trim();
     if (bruto === undefined) return padrao;
@@ -127,6 +133,50 @@ export function lerConfiguracao(ambiente: Ambiente): Configuracao {
   };
   leitor.confirmar();
   return configuracao;
+}
+
+export const RABBITMQ_URL_PADRAO = 'amqp://guest:guest@localhost:5672';
+export const MENSAGENS_TIMEOUT_PADRAO_MS = 10000;
+
+export interface ConfiguracaoDeMensageria {
+  rabbitmqUrl: string;
+  mensagensTimeoutMs: number;
+}
+
+export interface ConfiguracaoDeServico extends ConfiguracaoDeMensageria {
+  databaseUrl: string;
+  porta: number;
+  host: string;
+  nivelLog: NivelDeLog;
+  provedorProfissionais: ProvedorProfissionais;
+}
+
+export function lerConfiguracaoDeMensageria(ambiente: Ambiente): ConfiguracaoDeMensageria {
+  const leitor = new LeitorDeAmbiente(ambiente);
+  const configuracao = lerMensageria(leitor);
+  leitor.confirmar();
+  return configuracao;
+}
+
+export function lerConfiguracaoDeServico(ambiente: Ambiente, portaPadrao: number): ConfiguracaoDeServico {
+  const leitor = new LeitorDeAmbiente(ambiente);
+  const configuracao: ConfiguracaoDeServico = {
+    databaseUrl: leitor.urlDoBanco('DATABASE_URL'),
+    porta: leitor.inteiro('PORT', portaPadrao, 1, 65535),
+    host: leitor.texto('HOST', HOST_PADRAO),
+    nivelLog: leitor.opcao('LOG_LEVEL', NIVEIS_DE_LOG, 'info'),
+    provedorProfissionais: leitor.opcao('PROFISSIONAIS', PROVEDORES_PROFISSIONAIS, PROVEDORES_PADRAO.profissionais),
+    ...lerMensageria(leitor),
+  };
+  leitor.confirmar();
+  return configuracao;
+}
+
+function lerMensageria(leitor: LeitorDeAmbiente): ConfiguracaoDeMensageria {
+  return {
+    rabbitmqUrl: leitor.urlDoRabbitMq('RABBITMQ_URL', RABBITMQ_URL_PADRAO),
+    mensagensTimeoutMs: leitor.inteiro('MENSAGENS_TIMEOUT_MS', MENSAGENS_TIMEOUT_PADRAO_MS, 1, MAIOR_INTERVALO_MS),
+  };
 }
 
 function lerProvedores(leitor: LeitorDeAmbiente): ProvedoresConfigurados {

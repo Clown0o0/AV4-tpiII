@@ -1,0 +1,30 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../generated/notificacoes"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrigemNotificacao {
+  PROJETOS
+  RECOMENDACOES
+}
+
+model Notificacao {
+  id            String            @id @db.Uuid
+  evento        String
+  origem        OrigemNotificacao
+  projetoId     String
+  titulo        String
+  texto         String
+  destinatarios String[]
+  ocorridoEm    DateTime
+  recebidaEm    DateTime          @default(now())
+
+  @@index([projetoId])
+  @@map("notificacoes")
+}

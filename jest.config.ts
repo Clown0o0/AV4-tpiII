@@ -5,9 +5,10 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/server.ts'],
+  testTimeout: 15000,
+  collectCoverageFrom: ['src/**/*.ts', '!src/server.ts', '!src/entradas/**'],
   coverageThreshold: {
-    global: { branches: 80, functions: 80, lines: 80, statements: 80 },
+    global: { branches: 90, functions: 90, lines: 90, statements: 90 },
   },
   coverageReporters: ['text', 'text-summary', 'lcov'],
 };

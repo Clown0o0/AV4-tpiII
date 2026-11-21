@@ -1,3 +1,4 @@
+import type { AdaptadorProfissional } from '../adaptadores/profissional/AdaptadorProfissional';
 import type { ConviteRepository } from '../domain/ports/ConviteRepository';
 import type { ProfissionalRepository } from '../domain/ports/ProfissionalRepository';
 import type { ProjetoRepository } from '../domain/ports/ProjetoRepository';
@@ -37,7 +38,7 @@ import {
 export type RepositorioDeProjetos = ProjetoRepository & RecomendacaoRepository & ConviteRepository;
 
 export interface OpcoesSistemaRecomendacao {
-  profissionais: ProfissionalRepository;
+  profissionais?: ProfissionalRepository;
   projetos: RepositorioDeProjetos;
   eventos: PublicadorEventos;
   estrategias?: CatalogoEstrategias;
@@ -54,7 +55,7 @@ export interface OpcoesSistemaRecomendacao {
   opcoesCache?: Partial<OpcoesCache>;
 }
 
-type OpcoesOpcionais = 'limiares' | 'opcoesFonte' | 'provedores' | 'adaptadores' | 'politicaDeDecoradores' | 'registroDeAuditoria' | 'opcoesCache';
+type OpcoesOpcionais = 'profissionais' | 'limiares' | 'opcoesFonte' | 'provedores' | 'adaptadores' | 'politicaDeDecoradores' | 'registroDeAuditoria' | 'opcoesCache';
 
 type OpcoesCompletas = Required<Omit<OpcoesSistemaRecomendacao, OpcoesOpcionais>> &
   Pick<OpcoesSistemaRecomendacao, 'opcoesFonte'> & {
@@ -90,8 +91,13 @@ function completarAdaptadores(opcoes: OpcoesSistemaRecomendacao): AdaptadoresDoS
   return {
     armazenamento: opcoes.adaptadores?.armazenamento ?? criarAdaptadorArmazenamento(provedores.armazenamento),
     pagamento: opcoes.adaptadores?.pagamento ?? criarAdaptadorPagamento(provedores.pagamento),
-    profissional: opcoes.adaptadores?.profissional ?? criarAdaptadorProfissional(provedores.profissionais, opcoes.profissionais),
+    profissional: opcoes.adaptadores?.profissional ?? adaptadorDoCadastro(provedores.profissionais, opcoes.profissionais),
   };
+}
+
+function adaptadorDoCadastro(provedor: ProvedoresConfigurados['profissionais'], cadastro: ProfissionalRepository | undefined): AdaptadorProfissional {
+  if (!cadastro) throw new TypeError('Informe o cadastro de profissionais ou o adaptador de profissionais');
+  return criarAdaptadorProfissional(provedor, cadastro);
 }
 
 function montarSistema(opcoes: OpcoesCompletas): SistemaRecomendacao {

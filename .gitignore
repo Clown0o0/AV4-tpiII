@@ -3,3 +3,5 @@ coverage
 dist
 .env
 exemplos/gerados/
+generated
+servicos/*/.env

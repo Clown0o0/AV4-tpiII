@@ -1,25 +1,31 @@
 {
   "name": "cinebridge-recomendacao",
   "version": "1.0.0",
-  "description": "Microsserviço de recomendação e orquestração de equipes audiovisuais (cinebridge)",
+  "description": "Plataforma cinebridge em microsserviços: API de recomendação, profissionais, projetos e notificações",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "start:profissionais": "node dist/entradas/profissionais.js",
+    "start:projetos": "node dist/entradas/projetos.js",
+    "start:notificacoes": "node dist/entradas/notificacoes.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "preparar": "node scripts/preparar.js",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
     "exemplos": "node exemplos/atualizar-datas.js",
-    "postinstall": "prisma generate"
+    "prisma:gerar": "prisma generate --schema servicos/api/prisma/schema.prisma && prisma generate --schema servicos/profissionais/prisma/schema.prisma && prisma generate --schema servicos/projetos/prisma/schema.prisma && prisma generate --schema servicos/notificacoes/prisma/schema.prisma",
+    "postinstall": "npm run prisma:gerar"
   },
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "amqplib": "0.10.9",
     "fastify": "5.12.5"
   },
   "devDependencies": {
+    "@types/amqplib": "0.10.8",
     "@types/jest": "30.0.0",
     "@types/node": "24.13.6",
     "jest": "30.5.2",

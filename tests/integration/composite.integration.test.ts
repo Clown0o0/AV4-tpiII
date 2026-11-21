@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../generated/projetos';
 import type { FastifyInstance } from 'fastify';
 import { construirApp } from '../../src/app';
 import { ProjetoAnimacao } from '../../src/domain/entities/ProjetoAnimacao';

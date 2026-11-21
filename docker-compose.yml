@@ -1,0 +1,196 @@
+name: cinebridge
+
+x-banco: &banco
+  image: postgres:15-alpine
+  restart: unless-stopped
+  networks:
+    - cinebridge-net
+  environment: &credenciais
+    POSTGRES_USER: cinebridge
+    POSTGRES_PASSWORD: cinebridge
+
+x-saude-banco: &saude-banco
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
+x-servico: &servico
+  restart: unless-stopped
+  networks:
+    - cinebridge-net
+
+x-saude-servico: &saude-servico
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 30s
+
+services:
+  cinebridge-mq:
+    image: rabbitmq:3-management-alpine
+    container_name: cinebridge-mq
+    hostname: cinebridge-mq
+    restart: unless-stopped
+    networks:
+      - cinebridge-net
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-dados:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  profissionais-db:
+    <<: *banco
+    container_name: profissionais-db
+    environment:
+      <<: *credenciais
+      POSTGRES_DB: profissionais
+    ports:
+      - "${PROFISSIONAIS_DB_PORT:-5432}:5432"
+    volumes:
+      - profissionais-dados:/var/lib/postgresql/data
+    healthcheck:
+      <<: *saude-banco
+      test: ["CMD-SHELL", "pg_isready -U cinebridge -d profissionais"]
+
+  projetos-db:
+    <<: *banco
+    container_name: projetos-db
+    environment:
+      <<: *credenciais
+      POSTGRES_DB: projetos
+    ports:
+      - "${PROJETOS_DB_PORT:-5433}:5432"
+    volumes:
+      - projetos-dados:/var/lib/postgresql/data
+    healthcheck:
+      <<: *saude-banco
+      test: ["CMD-SHELL", "pg_isready -U cinebridge -d projetos"]
+
+  recomendacoes-db:
+    <<: *banco
+    container_name: recomendacoes-db
+    environment:
+      <<: *credenciais
+      POSTGRES_DB: recomendacoes
+    ports:
+      - "${RECOMENDACOES_DB_PORT:-5434}:5432"
+    volumes:
+      - recomendacoes-dados:/var/lib/postgresql/data
+    healthcheck:
+      <<: *saude-banco
+      test: ["CMD-SHELL", "pg_isready -U cinebridge -d recomendacoes"]
+
+  notificacoes-db:
+    <<: *banco
+    container_name: notificacoes-db
+    environment:
+      <<: *credenciais
+      POSTGRES_DB: notificacoes
+    ports:
+      - "${NOTIFICACOES_DB_PORT:-5435}:5432"
+    volumes:
+      - notificacoes-dados:/var/lib/postgresql/data
+    healthcheck:
+      <<: *saude-banco
+      test: ["CMD-SHELL", "pg_isready -U cinebridge -d notificacoes"]
+
+  cinebridge-profissionais:
+    <<: *servico
+    build:
+      context: .
+      dockerfile: servicos/profissionais/Dockerfile
+    image: cinebridge/profissionais:atv4
+    container_name: cinebridge-profissionais
+    env_file: servicos/profissionais/.env
+    ports:
+      - "${PROFISSIONAIS_PORT:-3001}:3001"
+    depends_on:
+      profissionais-db:
+        condition: service_healthy
+      cinebridge-mq:
+        condition: service_healthy
+    healthcheck:
+      <<: *saude-servico
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+
+  cinebridge-projetos:
+    <<: *servico
+    build:
+      context: .
+      dockerfile: servicos/projetos/Dockerfile
+    image: cinebridge/projetos:atv4
+    container_name: cinebridge-projetos
+    env_file: servicos/projetos/.env
+    ports:
+      - "${PROJETOS_PORT:-3002}:3002"
+    depends_on:
+      projetos-db:
+        condition: service_healthy
+      cinebridge-mq:
+        condition: service_healthy
+    healthcheck:
+      <<: *saude-servico
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+
+  cinebridge-notificacoes:
+    <<: *servico
+    build:
+      context: .
+      dockerfile: servicos/notificacoes/Dockerfile
+    image: cinebridge/notificacoes:atv4
+    container_name: cinebridge-notificacoes
+    env_file: servicos/notificacoes/.env
+    ports:
+      - "${NOTIFICACOES_PORT:-3003}:3003"
+    depends_on:
+      notificacoes-db:
+        condition: service_healthy
+      cinebridge-mq:
+        condition: service_healthy
+    healthcheck:
+      <<: *saude-servico
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+
+  cinebridge-api:
+    <<: *servico
+    build:
+      context: .
+      dockerfile: servicos/api/Dockerfile
+    image: cinebridge/api:atv4
+    container_name: cinebridge-api
+    env_file: servicos/api/.env
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      recomendacoes-db:
+        condition: service_healthy
+      cinebridge-mq:
+        condition: service_healthy
+      cinebridge-profissionais:
+        condition: service_healthy
+      cinebridge-projetos:
+        condition: service_healthy
+      cinebridge-notificacoes:
+        condition: service_healthy
+    healthcheck:
+      <<: *saude-servico
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+
+networks:
+  cinebridge-net:
+    name: cinebridge-net
+    driver: bridge
+
+volumes:
+  rabbitmq-dados:
+  profissionais-dados:
+  projetos-dados:
+  recomendacoes-dados:
+  notificacoes-dados:

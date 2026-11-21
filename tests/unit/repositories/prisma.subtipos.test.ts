@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../../generated/projetos';
 import { ErroValidacao } from '../../../src/domain/errors';
 import { Projeto } from '../../../src/domain/entities/Projeto';
 import { ProjetoAnimacao } from '../../../src/domain/entities/ProjetoAnimacao';
